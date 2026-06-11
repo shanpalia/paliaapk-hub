@@ -1,0 +1,28 @@
+{
+  "placeholderImages": [
+    {
+      "id": "featured-1",
+      "description": "Premium Hub Featured Banner",
+      "imageUrl": "https://picsum.photos/seed/shanpalia1/1200/600",
+      "imageHint": "tech binary abstract"
+    },
+    {
+      "id": "featured-2",
+      "description": "Mint Gradient Hub Display",
+      "imageUrl": "https://picsum.photos/seed/shanpalia2/1200/600",
+      "imageHint": "modern interface"
+    },
+    {
+      "id": "app-icon-1",
+      "description": "Premium App Icon",
+      "imageUrl": "https://picsum.photos/seed/sicon1/400/400",
+      "imageHint": "minimalist logo"
+    },
+    {
+      "id": "screenshot-1",
+      "description": "App Showcase Shot",
+      "imageUrl": "https://picsum.photos/seed/sshot1/600/1200",
+      "imageHint": "mobile interface"
+    }
+  ]
+}

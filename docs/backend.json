@@ -1,0 +1,73 @@
+
+{
+  "entities": {
+    "App": {
+      "title": "App",
+      "description": "Metadata for an APK application entry in the PaliaAPK Hub",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string", "description": "The name of the app" },
+        "packageName": { "type": "string", "description": "Android package name" },
+        "description": { "type": "string", "description": "Hub description" },
+        "whatsNew": { "type": "string", "description": "Version changelog" },
+        "version": { "type": "string", "description": "Release version string" },
+        "iconUrl": { "type": "string", "description": "URL to the hub icon" },
+        "screenshots": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "Gallery URLs"
+        },
+        "category": { "type": "string", "description": "Hub category name" },
+        "apkSize": { "type": "string", "description": "Binary size" },
+        "developer": { "type": "string", "description": "Developer entity" },
+        "downloads": { "type": "number", "description": "Total hub downloads" },
+        "apkUrl": { "type": "string", "description": "Link to the hosted binary" },
+        "status": { "type": "string", "enum": ["published", "hidden", "draft"] },
+        "isFeatured": { "type": "boolean", "description": "Hero section status" },
+        "isHidden": { "type": "boolean", "description": "UI visibility toggle" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["appName", "version", "category", "apkUrl", "iconUrl"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "PaliaAPK hub categories",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "iconName": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Hub user identity and security clearance",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin", "blocked"] },
+        "displayName": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/apps/{appId}": {
+      "schema": "App",
+      "description": "Collection of all hub binaries"
+    },
+    "/categories/{catId}": {
+      "schema": "Category",
+      "description": "Binary categories"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Client identities and clearances"
+    }
+  }
+}
