@@ -1,9 +1,16 @@
+/**
+ * PaliaAPK Hub Service Worker
+ * Protocol: Offline-First Resilient Caching
+ */
 
-// PaliaAPK Hub Service Worker
-const CACHE_NAME = 'palia-hub-v1';
+const CACHE_NAME = 'paliaapk-hub-v2';
+const OFFLINE_URL = '/offline.html';
+
 const ASSETS_TO_CACHE = [
   '/',
-  '/manifest.webmanifest',
+  OFFLINE_URL,
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -12,13 +19,38 @@ self.addEventListener('install', (event) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // Simple network-first strategy for dynamic hub data
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
-  );
+  // Only handle navigation requests for offline page fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
+    );
+  } else {
+    // For other requests, try cache then network
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        return response || fetch(event.request);
+      })
+    );
+  }
 });

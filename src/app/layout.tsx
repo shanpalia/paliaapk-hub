@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { TopHeader } from '@/components/layout/top-header';
@@ -11,6 +10,7 @@ import { PWAInstallBanner } from '@/components/pwa-install-banner';
 export const metadata: Metadata = {
   title: 'PaliaAPK Hub - Premium Android App Store',
   description: 'Download the latest verified APKs and games securely on PaliaAPK Hub.',
+  applicationName: 'PaliaAPK Hub',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-touch-fullscreen': 'yes',
+  }
 };
 
 export const viewport: Viewport = {
@@ -27,6 +31,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -39,14 +44,17 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
         <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className="font-body bg-white pb-20 max-w-screen-md mx-auto min-h-screen border-x border-gray-50 shadow-sm antialiased">
+      <body className="font-body bg-white pb-24 max-w-screen-md mx-auto min-h-screen border-x border-gray-50 shadow-sm antialiased">
         <FirebaseClientProvider>
           <PWAProvider>
             <TopHeader />
-            <main className="px-4 py-4">
+            <main className="px-4 py-4 sm:px-6 md:px-8">
               {children}
             </main>
             <BottomNav />

@@ -22,17 +22,21 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   const [isInstallable, setIsInstallable] = useState(false);
 
   useEffect(() => {
-    // Register Service Worker
+    // Register Service Worker with Global Scope
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(
-          (registration) => console.log('SW registered: ', registration),
-          (error) => console.log('SW registration failed: ', error)
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(
+          (registration) => {
+            console.log('SW Protocol: Handshake successful at scope:', registration.scope);
+          },
+          (error) => {
+            console.error('SW Protocol: Handshake failed:', error);
+          }
         );
       });
     }
 
-    // Handle Install Prompt
+    // Handle Install Prompt logic
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -51,7 +55,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
-      console.log('User accepted the PWA install');
+      console.log('Hub Terminal: User accepted installation.');
     }
     setDeferredPrompt(null);
     setIsInstallable(false);

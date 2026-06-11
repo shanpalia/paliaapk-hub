@@ -51,10 +51,12 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-none;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground font-body antialiased selection:bg-primary/20;
+    touch-action: manipulation;
   }
 }
 
@@ -96,4 +98,19 @@
 
 .animate-pulse-soft {
   animation: pulse-soft 3s ease-in-out infinite;
+}
+
+/* Responsive adjustments for Android tablets and large screens */
+@media (min-width: 640px) {
+  :root {
+    --radius: 2.5rem;
+  }
+  body {
+    @apply bg-gray-50/30;
+  }
+}
+
+/* Smooth scrolling for mobile and tablet */
+html {
+  scroll-behavior: smooth;
 }
