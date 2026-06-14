@@ -33,8 +33,41 @@ export function Navigation() {
   }, []);
 
   const handleLogoClick = () => {
-    console.log("LOGO WORKING");
-    alert("LOGO WORKING");
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+
+    // Reset counter if no click within 5 seconds
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = setTimeout(() => {
+      setClickCount(0);
+    }, 5000);
+
+    if (newCount < 5) {
+      toast({ 
+        title: `Click ${newCount}/5`, 
+        duration: 1000 
+      });
+    } else {
+      setClickCount(0);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      
+      toast({ 
+        title: "Secret Mode Activated", 
+        description: "Redirecting to security check...",
+        duration: 2000 
+      });
+
+      const pin = window.prompt("Enter Security PIN");
+      if (pin === "7227") {
+        router.push("/auth/login?admin=true");
+      } else if (pin !== null) {
+        toast({ 
+          variant: "destructive", 
+          title: "Invalid Security PIN",
+          description: "Access denied."
+        });
+      }
+    }
   };
 
   const navLinks = [
@@ -97,6 +130,7 @@ export function Navigation() {
             </Button>
             
             {user ? (
+              // Logout button only visible to admin
               isAdmin && (
                 <div className="flex items-center gap-2">
                   <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-full px-4 h-10 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold">
