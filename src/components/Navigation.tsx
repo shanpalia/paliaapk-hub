@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, User, Menu, Home, LayoutGrid, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -14,9 +14,7 @@ export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
-  const [clickCount, setClickCount] = useState(0);
   const [user, setUser] = useState<any>(null);
-  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,41 +27,11 @@ export function Navigation() {
 
     return () => {
       subscription.unsubscribe();
-      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     };
   }, []);
 
   const handleLogoClick = () => {
-    // Reset timer on every click
-    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-    
-    setClickCount((prev) => {
-      const newCount = prev + 1;
-      
-      if (newCount >= 5) {
-        const pin = prompt("Security Check: Enter Admin PIN");
-        if (pin === "7227") {
-          toast({ 
-            title: "Secret mode activated", 
-            description: "Redirecting to admin portal...",
-          });
-          router.push("/auth/login?admin=true");
-        } else if (pin !== null) {
-          toast({ 
-            variant: "destructive", 
-            title: "Invalid Security PIN" 
-          });
-        }
-        return 0; // Reset count after attempt
-      }
-
-      // Start timer to reset count after 5 seconds of inactivity
-      clickTimerRef.current = setTimeout(() => {
-        setClickCount(0);
-      }, 5000);
-
-      return newCount;
-    });
+    alert("Logo clicked");
   };
 
   const navLinks = [
