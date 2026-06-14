@@ -224,7 +224,7 @@ export default function EditAppPage() {
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="flex items-center justify-between mb-8">
           <Link href="/admin/dashboard" className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-primary transition-colors">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Console
           </Link>
           <div className="flex gap-2">
             <Link href="/">
@@ -388,7 +388,7 @@ export default function EditAppPage() {
                 disabled={saving}
                 className="flex-[2] h-16 rounded-[2rem] text-xl font-black shadow-2xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all"
               >
-                {saving ? <Loader2 className="animate-spin mr-2 h-6 w-6" /> : <Save className="mr-3 h-6 w-6" />}
+                {saving ? <Loader2 className="animate-spin mr-3 h-6 w-6" /> : <Save className="mr-3 h-6 w-6" />}
                 Update Application
               </Button>
           </div>

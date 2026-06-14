@@ -95,7 +95,7 @@ export default function AdminDashboard() {
         
         // Strict admin check
         if (authError || !session || session.user.email !== "shanpalia786@gmail.com") {
-          toast({ variant: "destructive", title: "Access Denied", description: "You do not have permission to access the console." });
+          toast({ variant: "destructive", title: "Access Denied", description: "Administrative authentication required." });
           router.push("/");
           return;
         }
@@ -118,9 +118,10 @@ export default function AdminDashboard() {
 
   const handleDelete = async (app: AppData) => {
     if (!isSupabaseConfigured || isInvalidKey) return;
-    if (!confirm(`Delete ${app.app_name}? This will remove all files from storage permanently.`)) return;
+    if (!confirm(`Are you sure you want to delete ${app.app_name}? This will remove all files from storage permanently.`)) return;
 
     try {
+      setLoading(true);
       const iconPath = extractPathFromUrl(app.icon_url, 'app-icons');
       const apkPath = extractPathFromUrl(app.apk_url, 'apk-files');
       const ssPath = extractPathFromUrl(app.screenshot_url || '', 'screenshots');
@@ -141,6 +142,8 @@ export default function AdminDashboard() {
       toast({ title: "App Deleted Successfully", description: `${app.app_name} has been removed from the repository.` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Deletion Failed", description: err.message });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -174,7 +177,7 @@ export default function AdminDashboard() {
     { label: "System Status", value: !showConfigAlert ? "Online" : "Offline", icon: BarChart3, color: !showConfigAlert ? "text-purple-500" : "text-destructive" },
   ];
 
-  if (loading) {
+  if (loading && apps.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/10">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -295,7 +298,7 @@ export default function AdminDashboard() {
                   <TableHead className="font-black">Version</TableHead>
                   <TableHead className="font-black">Category</TableHead>
                   <TableHead className="font-black">Downloads</TableHead>
-                  <TableHead className="font-black">Created</TableHead>
+                  <TableHead className="font-black">Upload Date</TableHead>
                   <TableHead className="text-right font-black pr-8">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -304,7 +307,7 @@ export default function AdminDashboard() {
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-24 text-muted-foreground font-medium">
                       <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                      No matching applications found
+                      {loading ? <Loader2 className="animate-spin h-6 w-6 mx-auto" /> : "No applications found"}
                     </TableCell>
                   </TableRow>
                 ) : filteredApps.map((app) => (
@@ -347,7 +350,7 @@ export default function AdminDashboard() {
                               <Edit className="h-5 w-5" />
                            </Button>
                          </Link>
-                         <Button onClick={() => handleDelete(app)} variant="ghost" size="icon" title="Remove App" className="h-10 w-10 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/5">
+                         <Button onClick={() => handleDelete(app)} variant="ghost" size="icon" title="Delete Permanent" className="h-10 w-10 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/5">
                             <Trash2 className="h-5 w-5" />
                          </Button>
                       </div>
