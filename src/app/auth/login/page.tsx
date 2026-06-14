@@ -1,4 +1,3 @@
-
 'use client';
 
 import {Button} from '@/components/ui/button';
@@ -6,12 +5,12 @@ import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import Link from 'next/link';
 import {Lock, Mail, ArrowLeft, Loader2} from 'lucide-react';
-import {useState} from 'react';
+import {useState, Suspense} from 'react';
 import {supabase} from '@/lib/supabase';
 import {useRouter, useSearchParams} from 'next/navigation';
 import {useToast} from '@/hooks/use-toast';
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,7 +36,6 @@ export default function LoginPage() {
 
       if (isAdminRequest) {
         if (data.user?.email !== 'shanpalia786@gmail.com') {
-          // Sign out immediately if they are not the admin but trying to access admin
           await supabase.auth.signOut();
           throw new Error('Invalid Admin Credentials');
         }
@@ -106,7 +104,7 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" stroke="bold" className="font-bold ml-1">Password</Label>
+            <Label htmlFor="password" className="font-bold ml-1">Password</Label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -149,5 +147,17 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

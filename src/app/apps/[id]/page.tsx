@@ -18,12 +18,12 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import {useState, useEffect} from 'react';
+import {useState, useEffect, Suspense} from 'react';
 import {supabase, AppData} from '@/lib/supabase';
 import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import {useToast} from '@/hooks/use-toast';
 
-export default function AppDetailsPage() {
+function AppDetailsContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,12 +34,56 @@ export default function AppDetailsPage() {
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [session, setSession] = useState<any>(null);
 
+  const handleDownload = async (currentApp: AppData) => {
+    if (!session) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to access premium APK downloads.',
+      });
+      router.push(`/auth/login?returnTo=/apps/${id}&action=download`);
+      return;
+    }
+
+    if (!currentApp) return;
+
+    const newCount = (currentApp.downloads || 0) + 1;
+    setApp(prev => prev ? {...prev, downloads: newCount} : null);
+
+    supabase
+      .from('apps')
+      .update({downloads: newCount})
+      .eq('id', id)
+      .then(({error}) => {
+        if (error) console.error('Failed to increment download count:', error);
+      });
+
+    setDownloadProgress(0);
+    const interval = setInterval(() => {
+      setDownloadProgress(prev => {
+        if (prev === null) return 0;
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setDownloadProgress(null);
+          }, 1500);
+
+          const link = document.createElement('a');
+          link.href = currentApp.apk_url;
+          link.download = currentApp.apk_file_name || `${currentApp.app_name}.apk`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 80);
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({data: {session}}) => {
       setSession(session);
-      if (session && searchParams.get('action') === 'download') {
-        setTimeout(handleDownload, 500);
-      }
     });
 
     const {
@@ -49,7 +93,7 @@ export default function AppDetailsPage() {
     });
 
     return () => subscription.unsubscribe();
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     const fetchApp = async () => {
@@ -72,270 +116,234 @@ export default function AppDetailsPage() {
     if (id) fetchApp();
   }, [id]);
 
-  const handleDownload = async () => {
-    if (!session) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please sign in to access premium APK downloads.',
-      });
-      router.push(`/auth/login?returnTo=/apps/${id}&action=download`);
-      return;
+  // Handle automatic download if triggered by returnTo
+  useEffect(() => {
+    if (app && session && searchParams.get('action') === 'download' && !loading) {
+       handleDownload(app);
     }
-
-    if (!app) return;
-
-    const newCount = (app.downloads || 0) + 1;
-    setApp(prev => prev ? {...prev, downloads: newCount} : null);
-
-    supabase
-      .from('apps')
-      .update({downloads: newCount})
-      .eq('id', id)
-      .then(({error}) => {
-        if (error) console.error('Failed to increment download count:', error);
-      });
-
-    setDownloadProgress(0);
-    const interval = setInterval(() => {
-      setDownloadProgress(prev => {
-        if (prev === null) return 0;
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setDownloadProgress(null);
-          }, 1500);
-
-          const link = document.createElement('a');
-          link.href = app.apk_url;
-          // Use the stored friendly name or fallback to app name
-          link.download = app.apk_file_name || `${app.app_name}.apk`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 80);
-  };
+  }, [app, session, searchParams, loading]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navigation />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
+      <div className="flex-1 flex items-center justify-center py-24">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!app) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="container mx-auto px-4 py-24 text-center">
-          <h1 className="text-4xl font-black">App Not Found</h1>
-          <Link href="/">
-            <Button className="mt-8 rounded-full">Back to Marketplace</Button>
-          </Link>
-        </div>
+      <div className="container mx-auto px-4 py-24 text-center">
+        <h1 className="text-4xl font-black">App Not Found</h1>
+        <Link href="/">
+          <Button className="mt-8 rounded-full">Back to Marketplace</Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <Navigation />
+    <main className="container mx-auto px-4 max-w-5xl py-8">
+      <Link
+        href="/"
+        className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-primary mb-8 transition-colors group"
+      >
+        <ChevronLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-1" />{' '}
+        Back to Marketplace
+      </Link>
 
-      <main className="container mx-auto px-4 max-w-5xl py-8">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-primary mb-8 transition-colors group"
-        >
-          <ChevronLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-1" />{' '}
-          Back to Marketplace
-        </Link>
+      <div className="bg-card rounded-[3rem] p-6 md:p-12 border border-border/50 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none" />
 
-        <div className="bg-card rounded-[3rem] p-6 md:p-12 border border-border/50 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none" />
+        <div className="flex flex-col md:flex-row gap-10 relative z-10 items-center md:items-start">
+          <div className="h-40 w-40 md:h-56 md:w-56 rounded-[3rem] shadow-2xl shadow-primary/20 overflow-hidden bg-white border-8 border-white flex-shrink-0 relative">
+            <Image
+              src={app.icon_url || 'https://picsum.photos/seed/app/256/256'}
+              alt={app.app_name}
+              fill
+              className="object-cover h-full w-full"
+            />
+          </div>
 
-          <div className="flex flex-col md:flex-row gap-10 relative z-10 items-center md:items-start">
-            <div className="h-40 w-40 md:h-56 md:w-56 rounded-[3rem] shadow-2xl shadow-primary/20 overflow-hidden bg-white border-8 border-white flex-shrink-0 relative">
-              <Image
-                src={app.icon_url || 'https://picsum.photos/seed/app/256/256'}
-                alt={app.app_name}
-                fill
-                className="object-cover h-full w-full"
-              />
+          <div className="flex-1 space-y-8 text-center md:text-left">
+            <div className="space-y-4">
+              <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                <Badge className="bg-primary/10 text-primary border-none px-4 py-1.5 font-black uppercase tracking-widest text-[10px]">
+                  {app.category || 'General'}
+                </Badge>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-100">
+                  <CheckCircle2 className="h-3 w-3" /> Verified
+                </div>
+              </div>
+
+              <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none">
+                {app.app_name}
+              </h1>
+              <p className="text-muted-foreground font-medium text-lg">
+                Official APK Release • Version {app.version}
+              </p>
             </div>
 
-            <div className="flex-1 space-y-8 text-center md:text-left">
-              <div className="space-y-4">
-                <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                  <Badge className="bg-primary/10 text-primary border-none px-4 py-1.5 font-black uppercase tracking-widest text-[10px]">
-                    {app.category || 'General'}
-                  </Badge>
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-100">
-                    <CheckCircle2 className="h-3 w-3" /> Verified
-                  </div>
+            <div className="grid grid-cols-3 gap-8 py-6 border-y border-border/50">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1.5 font-black text-2xl">
+                  4.8 <Star className="h-5 w-5 fill-primary text-primary" />
                 </div>
-
-                <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none">
-                  {app.app_name}
-                </h1>
-                <p className="text-muted-foreground font-medium text-lg">
-                  Official APK Release • Version {app.version}
+                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
+                  Rating
                 </p>
               </div>
-
-              <div className="grid grid-cols-3 gap-8 py-6 border-y border-border/50">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1.5 font-black text-2xl">
-                    4.8 <Star className="h-5 w-5 fill-primary text-primary" />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                    Rating
-                  </p>
+              <div className="text-center border-x border-border/50">
+                <div className="font-black text-2xl">
+                  {app.downloads.toLocaleString()}
                 </div>
-                <div className="text-center border-x border-border/50">
-                  <div className="font-black text-2xl">
-                    {app.downloads.toLocaleString()}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                    Downloads
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="font-black text-2xl">APK</div>
-                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                    File Type
-                  </p>
-                </div>
+                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
+                  Downloads
+                </p>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                {downloadProgress === null ? (
-                  <Button
-                    onClick={handleDownload}
-                    size="lg"
-                    className="flex-1 rounded-2xl h-20 text-2xl font-black shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    {session ? (
-                      <>
-                        <Download className="mr-3 h-8 w-8" /> Download APK
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="mr-3 h-8 w-8" /> Login to Download
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <div className="flex-1 bg-muted/50 p-6 rounded-[2rem] border border-primary/10 backdrop-blur-sm">
-                    <div className="flex justify-between text-sm font-black mb-3 px-1">
-                      <span className="text-primary uppercase tracking-widest animate-pulse">
-                        Securing Server Node...
-                      </span>
-                      <span>{downloadProgress}%</span>
-                    </div>
-                    <Progress
-                      value={downloadProgress}
-                      className="h-4 bg-white rounded-full"
-                    />
-                  </div>
-                )}
+              <div className="text-center">
+                <div className="font-black text-2xl">APK</div>
+                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
+                  File Type
+                </p>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className="mt-16 grid gap-12 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-12">
-            {app.screenshot_url && (
-              <section className="space-y-6">
-                <h2 className="text-3xl font-black flex items-center gap-3">
-                  <Images className="h-6 w-6 text-primary" /> Media Preview
-                </h2>
-                <div className="relative aspect-video rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl bg-muted group">
-                  <Image
-                    src={app.screenshot_url}
-                    alt="App Screenshot"
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+            <div className="flex flex-col sm:flex-row gap-4">
+              {downloadProgress === null ? (
+                <Button
+                  onClick={() => handleDownload(app)}
+                  size="lg"
+                  className="flex-1 rounded-2xl h-20 text-2xl font-black shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  {session ? (
+                    <>
+                      <Download className="mr-3 h-8 w-8" /> Download APK
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="mr-3 h-8 w-8" /> Login to Download
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="flex-1 bg-muted/50 p-6 rounded-[2rem] border border-primary/10 backdrop-blur-sm">
+                  <div className="flex justify-between text-sm font-black mb-3 px-1">
+                    <span className="text-primary uppercase tracking-widest animate-pulse">
+                      Securing Server Node...
+                    </span>
+                    <span>{downloadProgress}%</span>
+                  </div>
+                  <Progress
+                    value={downloadProgress}
+                    className="h-4 bg-white rounded-full"
                   />
                 </div>
-              </section>
-            )}
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
+      <div className="mt-16 grid gap-12 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-12">
+          {app.screenshot_url && (
             <section className="space-y-6">
               <h2 className="text-3xl font-black flex items-center gap-3">
-                <Info className="h-6 w-6 text-primary" /> About this App
+                <Images className="h-6 w-6 text-primary" /> Media Preview
               </h2>
-              <div className="p-8 rounded-[3rem] bg-white border border-border/50 shadow-sm">
-                <p className="text-muted-foreground leading-relaxed font-medium whitespace-pre-wrap text-xl">
-                  {app.description}
-                </p>
+              <div className="relative aspect-video rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl bg-muted group">
+                <Image
+                  src={app.screenshot_url}
+                  alt="App Screenshot"
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                />
               </div>
             </section>
+          )}
 
-            <section className="p-10 rounded-[3rem] bg-primary/5 border border-primary/10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-              <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 shrink-0">
-                <ShieldCheck className="h-10 w-10" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-black">
-                  Professional Security Audit
-                </h3>
-                <p className="text-muted-foreground font-medium mt-2 text-lg">
-                  Every package on PLKAPK Hub undergoes a multi-stage security analysis, signature verification, and sandbox testing.
-                </p>
-              </div>
-            </section>
-          </div>
+          <section className="space-y-6">
+            <h2 className="text-3xl font-black flex items-center gap-3">
+              <Info className="h-6 w-6 text-primary" /> About this App
+            </h2>
+            <div className="p-8 rounded-[3rem] bg-white border border-border/50 shadow-sm">
+              <p className="text-muted-foreground leading-relaxed font-medium whitespace-pre-wrap text-xl">
+                {app.description}
+              </p>
+            </div>
+          </section>
 
-          <aside className="space-y-8">
-            <div className="p-8 rounded-[3rem] bg-card border border-border/50 shadow-sm space-y-8 sticky top-24">
-              <h3 className="text-2xl font-black border-b border-border/50 pb-4">
-                Application Info
+          <section className="p-10 rounded-[3rem] bg-primary/5 border border-primary/10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
+            <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 shrink-0">
+              <ShieldCheck className="h-10 w-10" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black">
+                Professional Security Audit
               </h3>
-              <div className="space-y-6">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                    Version
-                  </span>
-                  <span className="font-black text-lg">{app.version}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                    Last Updated
-                  </span>
-                  <span className="font-black text-lg">
-                    {new Date(app.created_at).toLocaleDateString(undefined, {
-                      dateStyle: 'long',
-                    })}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                    Requirement
-                  </span>
-                  <span className="font-black text-lg">Android 8.0+</span>
-                </div>
+              <p className="text-muted-foreground font-medium mt-2 text-lg">
+                Every package on PLKAPK Hub undergoes a multi-stage security analysis, signature verification, and sandbox testing.
+              </p>
+            </div>
+          </section>
+        </div>
+
+        <aside className="space-y-8">
+          <div className="p-8 rounded-[3rem] bg-card border border-border/50 shadow-sm space-y-8 sticky top-24">
+            <h3 className="text-2xl font-black border-b border-border/50 pb-4">
+              Application Info
+            </h3>
+            <div className="space-y-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                  Version
+                </span>
+                <span className="font-black text-lg">{app.version}</span>
               </div>
-              <div className="pt-4">
-                <Button
-                  variant="secondary"
-                  className="w-full rounded-2xl h-14 font-black gap-2 hover:bg-primary/10 transition-colors"
-                >
-                  <History className="h-5 w-5" /> Change Log
-                </Button>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                  Last Updated
+                </span>
+                <span className="font-black text-lg">
+                  {new Date(app.created_at).toLocaleDateString(undefined, {
+                    dateStyle: 'long',
+                  })}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                  Requirement
+                </span>
+                <span className="font-black text-lg">Android 8.0+</span>
               </div>
             </div>
-          </aside>
+            <div className="pt-4">
+              <Button
+                variant="secondary"
+                className="w-full rounded-2xl h-14 font-black gap-2 hover:bg-primary/10 transition-colors"
+              >
+                <History className="h-5 w-5" /> Change Log
+              </Button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  );
+}
+
+export default function AppDetailsPage() {
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      <Navigation />
+      <Suspense fallback={
+        <div className="flex-1 flex items-center justify-center py-24">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
-      </main>
+      }>
+        <AppDetailsContent />
+      </Suspense>
     </div>
   );
 }
