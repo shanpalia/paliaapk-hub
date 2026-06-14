@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -98,11 +99,6 @@ export function Navigation() {
             
             {user ? (
               <div className="flex items-center gap-2">
-                {user.email === "shanpalia786@gmail.com" && (
-                  <Link href="/admin/dashboard">
-                    <Button variant="ghost" size="sm" className="rounded-full px-4 h-10 font-bold">Admin</Button>
-                  </Link>
-                )}
                 <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-full px-4 h-10 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold">
                   Logout
                 </Button>
