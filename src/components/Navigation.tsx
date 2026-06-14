@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -57,26 +58,22 @@ export function Navigation() {
   const handleLogoClick = () => {
     if (isPinDialogOpen) return;
 
-    // Reset timer
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
       setLogoClickCount(0);
-      console.log("Admin click count reset due to timeout");
     }, 5000);
 
     const nextCount = logoClickCount + 1;
     setLogoClickCount(nextCount);
-    console.log(`Logo click count: ${nextCount}`);
 
     if (nextCount < 5) {
       toast({ title: `Click ${nextCount}/5` });
     } else {
-      console.log("5th click detected. Opening PIN Modal.");
-      toast({ title: "Admin Mode Activated" });
       setLogoClickCount(0);
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       setPinValue("");
       setIsPinDialogOpen(true);
+      console.log("Opening PIN Modal");
     }
   };
 
@@ -84,23 +81,19 @@ export function Navigation() {
     console.log("PIN Submitted:", pinValue);
     if (pinValue === "7227") {
       console.log("PIN Correct");
-      toast({ title: "Opening Admin Dashboard" });
+      toast({ title: "Admin Mode Activated" });
       setIsPinDialogOpen(false);
 
       const { data: { session } } = await supabase.auth.getSession();
       const isAdminLoggedIn = session?.user?.email === "shanpalia786@gmail.com";
 
-      const targetUrl = isAdminLoggedIn ? "/admin/dashboard" : "/auth/login?admin=true";
-      console.log(`Redirecting to: ${targetUrl}`);
-      
-      router.push(targetUrl);
-      
-      // Fallback for immediate navigation
-      setTimeout(() => {
-        if (window.location.pathname !== targetUrl && !window.location.search.includes("admin=true")) {
-          window.location.href = targetUrl;
-        }
-      }, 300);
+      if (isAdminLoggedIn) {
+        toast({ title: "Opening Admin Dashboard" });
+        router.push("/admin/dashboard");
+      } else {
+        toast({ title: "Administrative Authentication Required" });
+        router.push("/auth/login?admin=true");
+      }
     } else {
       console.log("PIN Incorrect");
       toast({ 
@@ -120,6 +113,7 @@ export function Navigation() {
 
   if (!mounted) return null;
 
+  const isAdmin = user?.email === "shanpalia786@gmail.com";
   const userInitial = user?.email?.[0]?.toUpperCase() || 'U';
 
   const navLinks = [
@@ -178,58 +172,56 @@ export function Navigation() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div>
-                {user ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="relative h-10 w-10 rounded-full outline-none focus:ring-2 focus:ring-primary/20 ring-offset-2 transition-all">
-                        <Avatar className="h-10 w-10 border-2 border-primary/20">
-                          <AvatarFallback className="bg-primary text-primary-foreground font-black">
-                            {userInitial}
-                          </AvatarFallback>
-                        </Avatar>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-64 rounded-[2rem] p-3 shadow-2xl border-border/50" align="end" forceMount>
-                      <DropdownMenuLabel className="font-normal px-4 py-3">
-                        <div className="flex flex-col space-y-1">
-                          <p className="text-base font-black leading-none">{user.email?.split('@')[0]}</p>
-                          <p className="text-xs font-medium leading-none text-muted-foreground">{user.email}</p>
-                        </div>
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator className="my-2" />
-                      <Link href="/profile">
-                        <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
-                          <User className="mr-3 h-5 w-5 text-muted-foreground" /> My Profile
-                        </DropdownMenuItem>
-                      </Link>
-                      <Link href="/profile">
-                        <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
-                          <History className="mr-3 h-5 w-5 text-muted-foreground" /> Downloads
-                        </DropdownMenuItem>
-                      </Link>
-                      <DropdownMenuSeparator className="my-2" />
-                      <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive font-black px-4 py-2.5 focus:bg-destructive/5 focus:text-destructive">
-                        <LogOut className="mr-3 h-5 w-5" /> Logout
+              {/* Separate User vs Admin UI */}
+              {user && !isAdmin ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="relative h-10 w-10 rounded-full outline-none focus:ring-2 focus:ring-primary/20 ring-offset-2 transition-all">
+                      <Avatar className="h-10 w-10 border-2 border-primary/20">
+                        <AvatarFallback className="bg-primary text-primary-foreground font-black">
+                          {userInitial}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-64 rounded-[2rem] p-3 shadow-2xl border-border/50" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal px-4 py-3">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-base font-black leading-none">{user.email?.split('@')[0]}</p>
+                        <p className="text-xs font-medium leading-none text-muted-foreground">{user.email}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="my-2" />
+                    <Link href="/profile">
+                      <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
+                        <User className="mr-3 h-5 w-5 text-muted-foreground" /> My Profile
                       </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Link href="/auth/login">
-                    <Avatar className="h-10 w-10 border-2 border-muted bg-muted hover:border-primary/20 transition-all cursor-pointer">
-                      <AvatarFallback className="bg-muted text-muted-foreground">
-                        <User className="h-5 w-5" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </Link>
-                )}
-              </div>
+                    </Link>
+                    <Link href="/profile">
+                      <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
+                        <History className="mr-3 h-5 w-5 text-muted-foreground" /> Downloads
+                      </DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuSeparator className="my-2" />
+                    <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive font-black px-4 py-2.5 focus:bg-destructive/5 focus:text-destructive">
+                      <LogOut className="mr-3 h-5 w-5" /> Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link href="/auth/login">
+                  <Avatar className="h-10 w-10 border-2 border-muted bg-muted hover:border-primary/20 transition-all cursor-pointer">
+                    <AvatarFallback className="bg-muted text-muted-foreground">
+                      <User className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              )}
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Admin PIN Dialog */}
       <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
         <DialogContent className="rounded-[2.5rem] sm:max-w-md p-8">
           <DialogHeader className="items-center text-center">

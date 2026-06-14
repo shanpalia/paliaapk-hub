@@ -1,3 +1,4 @@
+
 'use client';
 
 import {Navigation} from '@/components/Navigation';
@@ -37,7 +38,6 @@ export default function AppDetailsPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({data: {session}}) => {
       setSession(session);
-      // Auto-trigger download if returning from login
       if (session && searchParams.get('action') === 'download') {
         setTimeout(handleDownload, 500);
       }
@@ -85,11 +85,9 @@ export default function AppDetailsPage() {
 
     if (!app) return;
 
-    // Optimistic Update
     const newCount = (app.downloads || 0) + 1;
     setApp(prev => prev ? {...prev, downloads: newCount} : null);
 
-    // Increment in Supabase
     supabase
       .from('apps')
       .update({downloads: newCount})
@@ -98,7 +96,6 @@ export default function AppDetailsPage() {
         if (error) console.error('Failed to increment download count:', error);
       });
 
-    // Visual feedback
     setDownloadProgress(0);
     const interval = setInterval(() => {
       setDownloadProgress(prev => {
@@ -109,7 +106,6 @@ export default function AppDetailsPage() {
             setDownloadProgress(null);
           }, 1500);
 
-          // Use a hidden anchor to trigger download without navigation
           const link = document.createElement('a');
           link.href = app.apk_url;
           link.download = `${app.app_name}.apk`;
@@ -162,12 +158,10 @@ export default function AppDetailsPage() {
           Back to Marketplace
         </Link>
 
-        {/* Hero Section */}
         <div className="bg-card rounded-[3rem] p-6 md:p-12 border border-border/50 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none" />
 
           <div className="flex flex-col md:flex-row gap-10 relative z-10 items-center md:items-start">
-            {/* App Icon */}
             <div className="h-40 w-40 md:h-56 md:w-56 rounded-[3rem] shadow-2xl shadow-primary/20 overflow-hidden bg-white border-8 border-white flex-shrink-0 relative">
               <Image
                 src={app.icon_url || 'https://picsum.photos/seed/app/256/256'}
@@ -177,7 +171,6 @@ export default function AppDetailsPage() {
               />
             </div>
 
-            {/* App Header Info */}
             <div className="flex-1 space-y-8 text-center md:text-left">
               <div className="space-y-4">
                 <div className="flex flex-wrap justify-center md:justify-start gap-2">
@@ -197,7 +190,6 @@ export default function AppDetailsPage() {
                 </p>
               </div>
 
-              {/* Stats Bar */}
               <div className="grid grid-cols-3 gap-8 py-6 border-y border-border/50">
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1.5 font-black text-2xl">
@@ -223,7 +215,6 @@ export default function AppDetailsPage() {
                 </div>
               </div>
 
-              {/* Download Action */}
               <div className="flex flex-col sm:flex-row gap-4">
                 {downloadProgress === null ? (
                   <Button
@@ -260,10 +251,8 @@ export default function AppDetailsPage() {
           </div>
         </div>
 
-        {/* App Content */}
         <div className="mt-16 grid gap-12 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-12">
-            {/* Screenshot Gallery */}
             {app.screenshot_url && (
               <section className="space-y-6">
                 <h2 className="text-3xl font-black flex items-center gap-3">
@@ -280,7 +269,6 @@ export default function AppDetailsPage() {
               </section>
             )}
 
-            {/* Description Section */}
             <section className="space-y-6">
               <h2 className="text-3xl font-black flex items-center gap-3">
                 <Info className="h-6 w-6 text-primary" /> About this App
@@ -292,7 +280,6 @@ export default function AppDetailsPage() {
               </div>
             </section>
 
-            {/* Security Notice */}
             <section className="p-10 rounded-[3rem] bg-primary/5 border border-primary/10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
               <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 shrink-0">
                 <ShieldCheck className="h-10 w-10" />
@@ -308,7 +295,6 @@ export default function AppDetailsPage() {
             </section>
           </div>
 
-          {/* Sidebar Details */}
           <aside className="space-y-8">
             <div className="p-8 rounded-[3rem] bg-card border border-border/50 shadow-sm space-y-8 sticky top-24">
               <h3 className="text-2xl font-black border-b border-border/50 pb-4">
