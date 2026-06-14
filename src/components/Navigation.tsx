@@ -61,8 +61,8 @@ export function Navigation() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg shadow-primary/20 group-active:scale-95 transition-transform">
               P
             </div>
-            <span className="hidden font-headline text-xl font-bold tracking-tight text-foreground sm:inline-block">
-              PLKAPK Hub
+            <span className="hidden font-headline text-xl font-bold tracking-tight text-red-500 sm:inline-block">
+              PLKAPK Hub TEST
             </span>
           </div>
 
