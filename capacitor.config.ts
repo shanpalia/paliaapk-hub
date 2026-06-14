@@ -5,10 +5,19 @@ const config: CapacitorConfig = {
   appName: 'PLKAPK Hub',
   webDir: 'out',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    allowNavigation: ['fpjrydfuhzwzkjuhkoaj.supabase.co']
   },
-  ios: {
-    contentInset: 'always'
+  plugins: {
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#ffffff'
+    }
+  },
+  android: {
+    buildOptions: {
+      releaseType: 'AAB'
+    }
   }
 };
 
