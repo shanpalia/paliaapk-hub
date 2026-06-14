@@ -3,9 +3,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, User, Menu, Home, LayoutGrid, Download, LogOut, Settings, History, ShieldCheck } from "lucide-react";
+import { Search, User, Menu, Home, LayoutGrid, LogOut, Settings, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -24,8 +24,6 @@ export function Navigation() {
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
-  const [clickCount, setClickCount] = useState(0);
-  const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -38,52 +36,8 @@ export function Navigation() {
 
     return () => {
       subscription.unsubscribe();
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, []);
-
-  const handleLogoClick = () => {
-    const newCount = clickCount + 1;
-    setClickCount(newCount);
-    
-    console.log(`[TopNav] Logo Click: ${newCount}/5`);
-
-    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    resetTimerRef.current = setTimeout(() => {
-      console.log("[TopNav] Click counter reset after 5s");
-      setClickCount(0);
-    }, 5000);
-
-    toast({ 
-      title: `Click ${newCount}/5`, 
-      description: newCount === 5 ? "Secret Mode Activated" : undefined,
-      duration: 1000 
-    });
-
-    if (newCount >= 5) {
-      console.log("[TopNav] 5th click reached - Activating secret mode");
-      setClickCount(0);
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-      
-      setTimeout(() => {
-        console.log("[TopNav] Opening Security PIN Prompt");
-        const pin = window.prompt("Enter Security PIN");
-        console.log(`[TopNav] PIN entered: ${pin}`);
-
-        if (pin === "7227") {
-          console.log("[TopNav] PIN Correct - Redirecting to Admin Login");
-          router.push("/auth/login?admin=true");
-        } else if (pin !== null) {
-          console.log("[TopNav] PIN Incorrect");
-          toast({ 
-            variant: "destructive", 
-            title: "Invalid Security PIN",
-            description: "Access denied."
-          });
-        }
-      }, 100);
-    }
-  };
 
   const navLinks = [
     { name: "Home", href: "/", icon: Home },
@@ -104,17 +58,14 @@ export function Navigation() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <div 
-            onClick={handleLogoClick}
-            className="flex items-center gap-2 cursor-pointer select-none group"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg shadow-primary/20 group-active:scale-95 transition-transform">
+          <Link href="/" className="flex items-center gap-2 select-none group">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg shadow-primary/20 transition-transform group-active:scale-95">
               P
             </div>
             <span className="hidden font-headline text-xl font-bold tracking-tight text-red-500 sm:inline-block">
               PLKAPK Hub TEST
             </span>
-          </div>
+          </Link>
 
           <div className="hidden lg:flex items-center space-x-1">
             {navLinks.map((link) => (
