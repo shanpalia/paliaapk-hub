@@ -1,9 +1,11 @@
+
 "use client";
 
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StoreIcon } from "@/components/StoreIcon";
 import { 
   Plus, 
   Trash2, 
@@ -236,8 +238,13 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
             </div>
-            <h1 className="text-5xl font-black tracking-tight mt-4">Management Console</h1>
-            <p className="text-muted-foreground font-medium text-lg">Central control suite for marketplace applications and cloud assets.</p>
+            <div className="flex items-center gap-4 mt-4">
+              <StoreIcon size="lg" />
+              <div>
+                <h1 className="text-5xl font-black tracking-tight">Management Console</h1>
+                <p className="text-muted-foreground font-medium text-lg">Central control suite for marketplace applications.</p>
+              </div>
+            </div>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full xl:w-auto">

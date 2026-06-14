@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { StoreIcon } from "@/components/StoreIcon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,28 +68,21 @@ export function Navigation() {
     setLogoClickCount(nextCount);
 
     if (nextCount < 5) {
-      toast({ title: `Click ${nextCount}/5` });
+      toast({ title: `Accessing Admin: ${nextCount}/5` });
     } else {
       setLogoClickCount(0);
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       setPinValue("");
       setIsPinDialogOpen(true);
-      console.log("Opening PIN Modal");
     }
   };
 
   const handlePinSubmit = async () => {
-    console.log("PIN Submitted:", pinValue);
     if (pinValue === "7227") {
-      console.log("PIN Correct");
-      toast({ title: "Admin Mode Activated" });
+      toast({ title: "Verification Required" });
       setIsPinDialogOpen(false);
-      
-      console.log("Redirecting to Admin Login for mandatory verification");
-      toast({ title: "Administrative Authentication Required" });
       router.push("/auth/login?admin=true");
     } else {
-      console.log("PIN Incorrect");
       toast({ 
         variant: "destructive", 
         title: "Invalid Security PIN",
@@ -123,9 +117,7 @@ export function Navigation() {
               onClick={handleLogoClick}
               className="flex items-center gap-2 select-none group cursor-pointer"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg shadow-primary/20">
-                P
-              </div>
+              <StoreIcon size="md" />
               <span className="hidden font-headline text-xl font-black tracking-tight sm:inline-block">
                 PLKAPK Hub
               </span>
@@ -149,11 +141,6 @@ export function Navigation() {
 
           <div className="flex flex-1 items-center justify-end gap-4">
             <div className="hidden w-full max-w-xs md:flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-primary">
-                  <Home className="h-5 w-5" />
-                </Button>
-              </Link>
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input

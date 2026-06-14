@@ -4,13 +4,11 @@
 import { useEffect, useState } from "react";
 import { Download, Smartphone, LayoutGrid, Zap, Package, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { StoreIcon } from "@/components/StoreIcon";
 
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(0);
-  const splashArtwork = PlaceHolderImages.find(i => i.id === "splash-artwork");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -50,12 +48,12 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           <div className="relative w-48 h-80 bg-white rounded-[2.5rem] border-[6px] border-slate-900 shadow-2xl flex flex-col items-center p-4 z-10 overflow-hidden">
              <div className="w-16 h-1 bg-slate-800 rounded-full mb-6" />
              {/* Content inside phone */}
-             <div className="w-full h-full bg-muted/30 rounded-2xl flex flex-col gap-3 p-3">
-                <div className="w-full h-32 bg-primary/10 rounded-xl" />
-                <div className="w-2/3 h-4 bg-muted rounded-full" />
-                <div className="w-full h-4 bg-muted rounded-full" />
-                <div className="mt-auto w-full h-10 bg-primary rounded-xl flex items-center justify-center">
-                   <Download className="h-5 w-5 text-white animate-bounce" />
+             <div className="w-full h-full bg-muted/30 rounded-2xl flex flex-col gap-3 p-3 items-center justify-center">
+                <StoreIcon size="lg" className="mb-4" />
+                <div className="w-2/3 h-3 bg-muted rounded-full" />
+                <div className="w-full h-3 bg-muted rounded-full opacity-50" />
+                <div className="mt-auto w-full h-8 bg-primary/20 rounded-xl flex items-center justify-center">
+                   <div className="h-1.5 w-1/2 bg-primary rounded-full" />
                 </div>
              </div>
           </div>
@@ -79,7 +77,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         <div className="text-center space-y-3 relative z-30">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 animate-pulse">
             <Package className="h-4 w-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Premium Store</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Premium APK Store</span>
           </div>
           <h1 className="text-5xl font-black tracking-tighter text-foreground">
             PLKAPK <span className="text-primary italic">Hub</span>
