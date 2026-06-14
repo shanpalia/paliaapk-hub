@@ -1,6 +1,7 @@
+
 /**
  * @fileOverview Node.js project exporter using archiver.
- * This script bundles the PLKAPK Hub source code into a ZIP file for easy distribution.
+ * This script bundles the PLKAPK Hub source code and Android project into a ZIP file.
  */
 const fs = require('fs');
 const path = require('path');
@@ -37,7 +38,7 @@ async function exportProject() {
   archive.pipe(output);
 
   // Glob patterns to include/exclude
-  // Excludes node_modules, .next, and the output zip itself to avoid recursion
+  // We explicitly include the android folder if it was generated
   archive.glob('**/*', {
     ignore: [
       'node_modules/**',

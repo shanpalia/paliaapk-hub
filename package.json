@@ -1,3 +1,4 @@
+
 {
   "name": "plkapk-hub",
   "version": "1.0.0",
@@ -8,11 +9,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next build && next export",
-    "cap:sync": "next build && npx cap sync",
-    "cap:open": "npx cap open android",
+    "export": "next build",
     "cap:add": "npx cap add android",
-    "build:android": "npm run export && npx cap sync && npx cap open android",
+    "cap:sync": "npx cap sync",
+    "cap:open": "npx cap open android",
+    "build:android": "npm run build && (npx cap add android || true) && npx cap sync",
     "export:project": "node scripts/export-project.js"
   },
   "dependencies": {
