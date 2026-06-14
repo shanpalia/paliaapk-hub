@@ -20,12 +20,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {useState, useEffect} from 'react';
 import {supabase, AppData} from '@/lib/supabase';
-import {useParams, useRouter} from 'next/navigation';
+import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import {useToast} from '@/hooks/use-toast';
 
 export default function AppDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {toast} = useToast();
   const id = params.id as string;
   const [app, setApp] = useState<AppData | null>(null);
@@ -36,6 +37,10 @@ export default function AppDetailsPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({data: {session}}) => {
       setSession(session);
+      // Auto-trigger download if returning from login
+      if (session && searchParams.get('action') === 'download') {
+        setTimeout(handleDownload, 500);
+      }
     });
 
     const {
@@ -45,7 +50,7 @@ export default function AppDetailsPage() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchApp = async () => {
@@ -72,15 +77,17 @@ export default function AppDetailsPage() {
     if (!session) {
       toast({
         title: 'Authentication Required',
-        description: 'Please log in to download this application.',
+        description: 'Please sign in to access premium APK downloads.',
       });
-      router.push(`/auth/login?returnTo=/apps/${id}`);
+      router.push(`/auth/login?returnTo=/apps/${id}&action=download`);
       return;
     }
 
     if (!app) return;
 
+    // Optimistic Update
     const newCount = (app.downloads || 0) + 1;
+    setApp(prev => prev ? {...prev, downloads: newCount} : null);
 
     // Increment in Supabase
     supabase
@@ -100,12 +107,16 @@ export default function AppDetailsPage() {
           clearInterval(interval);
           setTimeout(() => {
             setDownloadProgress(null);
-            setApp(prevApp =>
-              prevApp ? {...prevApp, downloads: newCount} : null
-            );
           }, 1500);
 
-          window.location.href = app.apk_url;
+          // Use a hidden anchor to trigger download without navigation
+          const link = document.createElement('a');
+          link.href = app.apk_url;
+          link.download = `${app.app_name}.apk`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
           return 100;
         }
         return prev + 10;
@@ -222,7 +233,7 @@ export default function AppDetailsPage() {
                   >
                     {session ? (
                       <>
-                        <Download className="mr-3 h-8 w-8" /> Download Now
+                        <Download className="mr-3 h-8 w-8" /> Download APK
                       </>
                     ) : (
                       <>
@@ -234,7 +245,7 @@ export default function AppDetailsPage() {
                   <div className="flex-1 bg-muted/50 p-6 rounded-[2rem] border border-primary/10 backdrop-blur-sm">
                     <div className="flex justify-between text-sm font-black mb-3 px-1">
                       <span className="text-primary uppercase tracking-widest animate-pulse">
-                        Initializing Server Connection...
+                        Securing Server Node...
                       </span>
                       <span>{downloadProgress}%</span>
                     </div>
@@ -265,7 +276,6 @@ export default function AppDetailsPage() {
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                 </div>
               </section>
             )}
@@ -289,12 +299,10 @@ export default function AppDetailsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-black">
-                  Professional Security Scan
+                  Professional Security Audit
                 </h3>
                 <p className="text-muted-foreground font-medium mt-2 text-lg">
-                  Every file hosted on PLKAPK Hub undergoes a rigorous
-                  multi-stage security audit. We verify developer signatures and
-                  scan for vulnerabilities to ensure 100% safe installation.
+                  Every package on PLKAPK Hub undergoes a multi-stage security analysis, signature verification, and sandbox testing.
                 </p>
               </div>
             </section>
@@ -312,16 +320,6 @@ export default function AppDetailsPage() {
                     Version
                   </span>
                   <span className="font-black text-lg">{app.version}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                    Package Identity
-                  </span>
-                  <span className="font-mono text-sm break-all font-bold opacity-70">
-                    com.
-                    {app.app_name.toLowerCase().replace(/\s+/g, '.')}
-                    .official
-                  </span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
@@ -345,7 +343,7 @@ export default function AppDetailsPage() {
                   variant="secondary"
                   className="w-full rounded-2xl h-14 font-black gap-2 hover:bg-primary/10 transition-colors"
                 >
-                  <History className="h-5 w-5" /> Full Version Log
+                  <History className="h-5 w-5" /> Change Log
                 </Button>
               </div>
             </div>

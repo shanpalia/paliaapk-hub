@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -6,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { User, Mail, Download, LogOut, ChevronRight, ShieldCheck, History, Settings } from "lucide-react";
-import Image from "next/image";
+import { User, Mail, Download, LogOut, ChevronRight, ShieldCheck, History, Settings, Star, Cloud } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -36,17 +35,17 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-background flex flex-col">
         <Navigation />
         <main className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          <div className="h-24 w-24 bg-muted rounded-full flex items-center justify-center mb-6">
-            <User className="h-12 w-12 text-muted-foreground" />
+          <div className="h-32 w-32 bg-muted rounded-[2.5rem] flex items-center justify-center mb-8 rotate-3 shadow-xl">
+            <User className="h-16 w-16 text-muted-foreground -rotate-3" />
           </div>
-          <h1 className="text-3xl font-black mb-2">Join the Community</h1>
-          <p className="text-muted-foreground max-w-xs mb-8">Sign in to track your downloads, review apps, and receive security updates.</p>
-          <div className="flex flex-col gap-3 w-full max-w-xs">
+          <h1 className="text-4xl font-black mb-4">Join PLKAPK Hub</h1>
+          <p className="text-muted-foreground max-w-xs mb-10 text-lg">Create an account to track downloads, secure your favorite APKs, and get instant updates.</p>
+          <div className="flex flex-col gap-4 w-full max-w-xs">
             <Link href="/auth/login" className="w-full">
-              <Button className="w-full h-14 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20">Sign In</Button>
+              <Button className="w-full h-16 rounded-[2rem] text-xl font-black shadow-2xl shadow-primary/20">Sign In</Button>
             </Link>
             <Link href="/auth/signup" className="w-full">
-              <Button variant="outline" className="w-full h-14 rounded-2xl text-lg font-bold">Create Account</Button>
+              <Button variant="outline" className="w-full h-16 rounded-[2rem] text-xl font-black">Create Account</Button>
             </Link>
           </div>
         </main>
@@ -54,39 +53,69 @@ export default function ProfilePage() {
     );
   }
 
+  const displayName = user.email?.split('@')[0];
+  const userInitial = user.email?.[0].toUpperCase();
+
   return (
     <div className="min-h-screen bg-muted/10 pb-20 lg:pb-0">
       <Navigation />
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <header className="text-center mb-10">
-          <div className="relative h-28 w-28 mx-auto mb-4">
-            <div className="h-full w-full rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-4xl shadow-2xl shadow-primary/30">
-              {user.email?.[0].toUpperCase()}
-            </div>
+      <main className="container mx-auto px-4 py-12 max-w-2xl">
+        <header className="text-center mb-12">
+          <div className="relative h-32 w-32 mx-auto mb-6 group">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all" />
+            <Avatar className="h-32 w-32 border-8 border-white shadow-2xl relative z-10">
+              <AvatarFallback className="bg-primary text-primary-foreground font-black text-5xl">
+                {userInitial}
+              </AvatarFallback>
+            </Avatar>
           </div>
-          <h1 className="text-2xl font-black">{user.email?.split('@')[0]}</h1>
-          <p className="text-muted-foreground font-medium flex items-center justify-center gap-2 mt-1">
-            <Mail className="h-4 w-4" /> {user.email}
+          <h1 className="text-3xl font-black tracking-tight">{displayName}</h1>
+          <p className="text-muted-foreground font-bold flex items-center justify-center gap-2 mt-2 bg-white/50 w-fit mx-auto px-4 py-1 rounded-full border border-border/50">
+            <Mail className="h-4 w-4 text-primary" /> {user.email}
           </p>
         </header>
 
+        <div className="grid grid-cols-2 gap-4 mb-10">
+          <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-6 text-center">
+            <div className="h-10 w-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <Download className="h-5 w-5" />
+            </div>
+            <p className="text-2xl font-black">12</p>
+            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total Downloads</p>
+          </Card>
+          <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-6 text-center">
+            <div className="h-10 w-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <Star className="h-5 w-5 fill-amber-500" />
+            </div>
+            <p className="text-2xl font-black">4</p>
+            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Reviews Sent</p>
+          </Card>
+        </div>
+
         <div className="space-y-4">
-          <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden">
+          <Card className="rounded-[2.5rem] border-none shadow-sm overflow-hidden bg-white">
             <CardContent className="p-0">
               {[
-                { label: "Download History", icon: History, href: "/downloads" },
-                { label: "Security & Safety", icon: ShieldCheck, href: "/security" },
-                { label: "Account Settings", icon: Settings, href: "/settings" },
+                { label: "Download History", icon: History, href: "#", count: "12 Items" },
+                { label: "Cloud Backup", icon: Cloud, href: "#", badge: "New" },
+                { label: "Security Settings", icon: ShieldCheck, href: "#" },
+                { label: "App Preferences", icon: Settings, href: "#" },
               ].map((item, idx) => (
-                <Link key={idx} href={item.href} className="flex items-center justify-between p-6 hover:bg-muted/50 transition-colors border-b last:border-none">
+                <div key={idx} className="flex items-center justify-between p-6 hover:bg-muted/30 transition-colors border-b last:border-none cursor-pointer group">
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      <item.icon className="h-5 w-5" />
+                    <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
+                      <item.icon className="h-6 w-6" />
                     </div>
-                    <span className="font-bold">{item.label}</span>
+                    <div>
+                      <span className="font-bold block">{item.label}</span>
+                      {item.count && <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{item.count}</span>}
+                    </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </Link>
+                  <div className="flex items-center gap-2">
+                    {item.badge && <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{item.badge}</span>}
+                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
               ))}
             </CardContent>
           </Card>
@@ -96,7 +125,7 @@ export default function ProfilePage() {
             variant="ghost" 
             className="w-full h-16 rounded-[2rem] text-destructive font-black hover:bg-destructive/5 gap-3"
           >
-            <LogOut className="h-5 w-5" /> Sign Out
+            <LogOut className="h-5 w-5" /> Sign Out from Marketplace
           </Button>
         </div>
       </main>

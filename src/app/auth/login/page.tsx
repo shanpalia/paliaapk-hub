@@ -1,4 +1,3 @@
-
 'use client';
 
 import {Button} from '@/components/ui/button';
@@ -21,13 +20,13 @@ export default function LoginPage() {
 
   const isAdminRequest = searchParams.get('admin') === 'true';
   const returnTo = searchParams.get('returnTo');
+  const action = searchParams.get('action');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Security Check: If it's an admin request, enforce specific hardcoded credentials
       if (isAdminRequest) {
         if (email !== 'shanpalia786@gmail.com' || password !== 'hafsa@1#HASAN') {
           throw new Error('Invalid Admin Credentials');
@@ -43,11 +42,12 @@ export default function LoginPage() {
 
       toast({title: 'Signed in successfully'});
 
-      // Strict redirect for admin
       if (isAdminRequest || data.user?.email === 'shanpalia786@gmail.com') {
         router.push('/admin/dashboard');
       } else if (returnTo) {
-        router.push(returnTo);
+        // Construct clean redirect URL
+        const redirectUrl = action ? `${returnTo}?action=${action}` : returnTo;
+        router.push(redirectUrl);
       } else {
         router.push('/');
       }
@@ -66,34 +66,34 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <Link
         href="/"
-        className="absolute top-8 left-8 flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+        className="absolute top-8 left-8 flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-bold"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to Home
+        <ArrowLeft className="h-4 w-4" /> Back to Store
       </Link>
 
-      <div className="w-full max-w-md space-y-8 bg-card p-8 rounded-[2rem] shadow-xl border border-border/50">
+      <div className="w-full max-w-md space-y-8 bg-card p-8 rounded-[3rem] shadow-2xl border border-border/50">
         <div className="text-center space-y-2">
-          <div className="h-16 w-16 bg-primary rounded-2xl mx-auto flex items-center justify-center text-primary-foreground font-black text-3xl shadow-lg shadow-primary/30">
+          <div className="h-20 w-20 bg-primary rounded-3xl mx-auto flex items-center justify-center text-primary-foreground font-black text-4xl shadow-xl shadow-primary/30">
             P
           </div>
           <h1 className="text-3xl font-black tracking-tight mt-6">
             {isAdminRequest ? 'Admin Portal' : 'Welcome Back'}
           </h1>
-          <p className="text-muted-foreground">
-            {isAdminRequest ? 'Enter administrative credentials' : 'Sign in to your PLKAPK Hub account'}
+          <p className="text-muted-foreground font-medium">
+            {isAdminRequest ? 'Verify administrative identity' : 'Access your PLKAPK Hub collection'}
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="email" className="font-bold ml-1">Email Address</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="email"
                 type="email"
                 placeholder="name@example.com"
-                className="pl-10 rounded-xl h-12"
+                className="pl-12 rounded-2xl h-14 bg-muted/30 border-none font-medium"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -101,16 +101,14 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-            </div>
+            <Label htmlFor="password" stroke="bold" className="font-bold ml-1">Password</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                className="pl-10 rounded-xl h-12"
+                className="pl-12 rounded-2xl h-14 bg-muted/30 border-none font-medium"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -121,10 +119,10 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-12 rounded-xl text-lg font-bold shadow-lg shadow-primary/20"
+            className="w-full h-16 rounded-[2rem] text-xl font-black shadow-2xl shadow-primary/20 hover:scale-[1.01] transition-all"
           >
             {loading ? (
-              <Loader2 className="animate-spin h-5 w-5" />
+              <Loader2 className="animate-spin h-6 w-6" />
             ) : (
               isAdminRequest ? 'Login as Admin' : 'Sign In'
             )}
@@ -133,11 +131,11 @@ export default function LoginPage() {
 
         {!isAdminRequest && (
           <div className="text-center pt-4">
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
+            <p className="text-sm text-muted-foreground font-medium">
+              New to PLKAPK Hub?{' '}
               <Link
                 href="/auth/signup"
-                className="text-primary font-bold hover:underline"
+                className="text-primary font-black hover:underline"
               >
                 Create Account
               </Link>
