@@ -16,41 +16,53 @@ export function BottomNavigation() {
   const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleProfileClick = (e: React.MouseEvent) => {
-    // Only intercept if we're doing the secret sequence
+    // Increment count
     const newCount = clickCount + 1;
     setClickCount(newCount);
+    
+    console.log(`[BottomNav] Profile Click: ${newCount}/5`);
 
+    // Reset timer for 5 seconds
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
+      console.log("[BottomNav] Click counter reset after 5s");
       setClickCount(0);
     }, 5000);
 
-    if (newCount < 5) {
-      toast({ 
-        title: `Click ${newCount}/5`, 
-        duration: 1000 
-      });
-    } else {
+    // Provide toast feedback for every click
+    toast({ 
+      title: `Click ${newCount}/5`, 
+      description: newCount === 5 ? "Secret Mode Activated" : undefined,
+      duration: 1000 
+    });
+
+    if (newCount >= 5) {
+      console.log("[BottomNav] 5th click reached - Intercepting navigation");
       e.preventDefault();
+      e.stopPropagation();
+
+      const currentCount = newCount;
       setClickCount(0);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-      
-      toast({ 
-        title: "Secret Mode Activated", 
-        description: "Redirecting to security check...",
-        duration: 2000 
-      });
 
-      const pin = window.prompt("Enter Security PIN");
-      if (pin === "7227") {
-        router.push("/auth/login?admin=true");
-      } else if (pin !== null) {
-        toast({ 
-          variant: "destructive", 
-          title: "Invalid Security PIN",
-          description: "Access denied."
-        });
-      }
+      // Brief delay to allow toast to appear and event loop to cycle
+      setTimeout(() => {
+        console.log("[BottomNav] Opening Security PIN Prompt");
+        const pin = window.prompt("Enter Security PIN");
+        console.log(`[BottomNav] PIN entered: ${pin}`);
+
+        if (pin === "7227") {
+          console.log("[BottomNav] PIN Correct - Redirecting to Admin Login");
+          router.push("/auth/login?admin=true");
+        } else if (pin !== null) {
+          console.log("[BottomNav] PIN Incorrect");
+          toast({ 
+            variant: "destructive", 
+            title: "Invalid Security PIN",
+            description: "Access denied."
+          });
+        }
+      }, 100);
     }
   };
 
@@ -75,7 +87,7 @@ export function BottomNavigation() {
             <Link
               key={item.href}
               href={item.href}
-              onClick={isProfile ? handleProfileClick : undefined}
+              onClick={isProfile ? (e) => handleProfileClick(e) : undefined}
               className={cn(
                 "flex flex-col items-center gap-1 transition-all duration-300",
                 isActive ? "text-primary scale-110" : "text-muted-foreground"

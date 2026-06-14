@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -44,37 +45,43 @@ export function Navigation() {
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
+    
+    console.log(`[TopNav] Logo Click: ${newCount}/5`);
 
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
+      console.log("[TopNav] Click counter reset after 5s");
       setClickCount(0);
     }, 5000);
 
-    if (newCount < 5) {
-      toast({ 
-        title: `Click ${newCount}/5`, 
-        duration: 1000 
-      });
-    } else {
+    toast({ 
+      title: `Click ${newCount}/5`, 
+      description: newCount === 5 ? "Secret Mode Activated" : undefined,
+      duration: 1000 
+    });
+
+    if (newCount >= 5) {
+      console.log("[TopNav] 5th click reached - Activating secret mode");
       setClickCount(0);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
       
-      toast({ 
-        title: "Secret Mode Activated", 
-        description: "Redirecting to security check...",
-        duration: 2000 
-      });
+      setTimeout(() => {
+        console.log("[TopNav] Opening Security PIN Prompt");
+        const pin = window.prompt("Enter Security PIN");
+        console.log(`[TopNav] PIN entered: ${pin}`);
 
-      const pin = window.prompt("Enter Security PIN");
-      if (pin === "7227") {
-        router.push("/auth/login?admin=true");
-      } else if (pin !== null) {
-        toast({ 
-          variant: "destructive", 
-          title: "Invalid Security PIN",
-          description: "Access denied."
-        });
-      }
+        if (pin === "7227") {
+          console.log("[TopNav] PIN Correct - Redirecting to Admin Login");
+          router.push("/auth/login?admin=true");
+        } else if (pin !== null) {
+          console.log("[TopNav] PIN Incorrect");
+          toast({ 
+            variant: "destructive", 
+            title: "Invalid Security PIN",
+            description: "Access denied."
+          });
+        }
+      }, 100);
     }
   };
 
@@ -169,16 +176,18 @@ export function Navigation() {
                     </DropdownMenuItem>
                   </Link>
                   {isAdmin && (
-                    <Link href="/admin/dashboard">
-                      <DropdownMenuItem className="rounded-xl cursor-pointer font-bold text-primary">
-                        <Settings className="mr-2 h-4 w-4" /> Admin Panel
+                    <>
+                      <Link href="/admin/dashboard">
+                        <DropdownMenuItem className="rounded-xl cursor-pointer font-bold text-primary">
+                          <Settings className="mr-2 h-4 w-4" /> Admin Panel
+                        </DropdownMenuItem>
+                      </Link>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive focus:text-destructive">
+                        <LogOut className="mr-2 h-4 w-4" /> Logout
                       </DropdownMenuItem>
-                    </Link>
+                    </>
                   )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive focus:text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" /> Logout
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
