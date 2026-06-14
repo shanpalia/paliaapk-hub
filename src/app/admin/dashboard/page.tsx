@@ -37,19 +37,33 @@ export default function AdminDashboard() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInvalidKey, setIsInvalidKey] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session || session.user.email !== "shanpalia786@gmail.com") {
-        router.push("/auth/login");
+      if (!isSupabaseConfigured) {
+        setLoading(false);
         return;
       }
-      if (isSupabaseConfigured) {
+
+      try {
+        const { data: { session }, error: authError } = await supabase.auth.getSession();
+        
+        if (authError) {
+          if (authError.message === "Invalid API key") setIsInvalidKey(true);
+          throw authError;
+        }
+
+        if (!session || session.user.email !== "shanpalia786@gmail.com") {
+          router.push("/auth/login");
+          return;
+        }
+        
         fetchApps();
-      } else {
+      } catch (err: any) {
+        console.error("Auth check failed:", err.message);
         setLoading(false);
       }
     };
@@ -61,10 +75,12 @@ export default function AdminDashboard() {
           .select('*')
           .order('created_at', { ascending: false });
         
-        if (error) throw error;
+        if (error) {
+          if (error.message === "Invalid API key") setIsInvalidKey(true);
+          throw error;
+        }
         setApps(data || []);
       } catch (err: any) {
-        console.error("Dashboard fetch error:", err.message);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -75,7 +91,7 @@ export default function AdminDashboard() {
   }, [router]);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || isInvalidKey) return;
     if (!confirm(`Are you sure you want to delete ${name}?`)) return;
 
     try {
@@ -89,13 +105,14 @@ export default function AdminDashboard() {
     }
   };
 
+  const showConfigAlert = !isSupabaseConfigured || isInvalidKey;
   const totalDownloads = apps.reduce((sum, app) => sum + (app.downloads || 0), 0);
 
   const stats = [
     { label: "Total Apps", value: apps.length.toString(), icon: Package, color: "text-blue-500" },
     { label: "Total Downloads", value: totalDownloads.toLocaleString(), icon: TrendingUp, color: "text-primary" },
     { label: "Active Categories", value: Array.from(new Set(apps.map(a => a.category))).length.toString(), icon: LayoutGrid, color: "text-green-500" },
-    { label: "System Status", value: isSupabaseConfigured ? "Online" : "Offline", icon: BarChart3, color: isSupabaseConfigured ? "text-purple-500" : "text-destructive" },
+    { label: "System Status", value: !showConfigAlert ? "Online" : "Offline", icon: BarChart3, color: !showConfigAlert ? "text-purple-500" : "text-destructive" },
   ];
 
   return (
@@ -103,12 +120,16 @@ export default function AdminDashboard() {
       <Navigation />
       
       <main className="container mx-auto px-4 py-8 space-y-8">
-        {!isSupabaseConfigured && (
+        {showConfigAlert && (
           <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 text-destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle className="font-black uppercase tracking-widest text-xs">Service Offline</AlertTitle>
+            <AlertTitle className="font-black uppercase tracking-widest text-xs">
+              {isInvalidKey ? "Invalid Credentials" : "Service Offline"}
+            </AlertTitle>
             <AlertDescription className="text-sm font-medium">
-              Database connection is not established. Please configure Supabase environment variables.
+              {isInvalidKey 
+                ? "The Supabase API key is invalid. Verification failed." 
+                : "Database connection is not established. Please configure Supabase environment variables."}
             </AlertDescription>
           </Alert>
         )}
@@ -120,7 +141,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex gap-2">
             <Link href="/admin/add">
-              <Button disabled={!isSupabaseConfigured} className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">
+              <Button disabled={showConfigAlert} className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">
                 <Plus className="mr-2 h-4 w-4" /> Upload New App
               </Button>
             </Link>

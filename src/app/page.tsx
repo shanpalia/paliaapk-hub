@@ -15,6 +15,7 @@ export default function Home() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInvalidKey, setIsInvalidKey] = useState(false);
   const heroImage = PlaceHolderImages.find(i => i.id === "hero-bg");
 
   useEffect(() => {
@@ -31,18 +32,21 @@ export default function Home() {
           .order('created_at', { ascending: false });
         
         if (fetchError) {
-          console.error("Supabase fetch error:", fetchError.message);
-          setError(fetchError.message);
+          if (fetchError.message === "Invalid API key" || fetchError.code === "PGRST301") {
+            setIsInvalidKey(true);
+          } else {
+            console.error("Supabase fetch error:", fetchError.message);
+            setError(fetchError.message);
+          }
           setApps([]);
         } else {
           setApps(data || []);
         }
       } catch (err: any) {
-        // Suppress "Failed to fetch" noise if likely due to network/config
         if (err.message !== "Failed to fetch") {
           console.error("Unexpected error:", err);
         }
-        setError("Could not connect to the database. Please check your Supabase configuration.");
+        setError("Could not connect to the database. Check your network or configuration.");
       } finally {
         setLoading(false);
       }
@@ -51,17 +55,23 @@ export default function Home() {
     fetchApps();
   }, []);
 
+  const showConfigAlert = !isSupabaseConfigured || isInvalidKey;
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
       
       <main className="container mx-auto px-4 py-8 space-y-12">
-        {!isSupabaseConfigured && (
+        {showConfigAlert && (
           <Alert variant="destructive" className="rounded-2xl border-primary/20 bg-primary/5 text-primary">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle className="font-black uppercase tracking-widest text-xs">Configuration Required</AlertTitle>
+            <AlertTitle className="font-black uppercase tracking-widest text-xs">
+              {isInvalidKey ? "Invalid Credentials" : "Configuration Required"}
+            </AlertTitle>
             <AlertDescription className="text-sm font-medium">
-              Supabase is not configured. Please add <strong>NEXT_PUBLIC_SUPABASE_URL</strong> and <strong>NEXT_PUBLIC_SUPABASE_ANON_KEY</strong> to your environment variables to enable the marketplace.
+              {isInvalidKey 
+                ? "The Supabase API key provided is invalid. Please verify your environment variables." 
+                : "Supabase is not configured. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your environment variables."}
             </AlertDescription>
           </Alert>
         )}
@@ -95,7 +105,6 @@ export default function Home() {
                 alt="Modern Tech"
                 fill
                 className="object-cover rounded-[2rem] shadow-2xl rotate-1 border-8 border-white"
-                data-ai-hint="technology nature"
               />
             </div>
           </div>
@@ -129,9 +138,9 @@ export default function Home() {
               <div>
                 <h3 className="text-2xl font-black text-foreground">No Apps Available Yet</h3>
                 <p className="text-muted-foreground font-medium mt-2">
-                  {isSupabaseConfigured 
-                    ? "Check back soon! Our team is verifying new content for the hub." 
-                    : "Configure Supabase to start adding applications to your store."}
+                  {showConfigAlert 
+                    ? "Configure Supabase to start adding applications to your store." 
+                    : "Check back soon! Our team is verifying new content for the hub."}
                 </p>
               </div>
             </div>
