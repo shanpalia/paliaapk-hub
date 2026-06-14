@@ -95,22 +95,17 @@ export function BottomNavigation() {
               <button
                 key={item.href}
                 onClick={(e) => {
+                  // If counting clicks, don't navigate
                   if (adminClickCount > 0) {
                     handleAdminTrigger(e);
                   } else {
-                    // Start counting or navigate
+                    // This creates a small delay to see if user clicks again
                     const timer = setTimeout(() => {
-                       const target = session ? "/profile" : "/auth/login";
-                       router.push(target);
+                      const target = session ? "/profile" : "/auth/login";
+                      router.push(target);
                     }, 300);
-                    
-                    // If they click again quickly, it cancels navigation and counts
-                    const handleSecondary = (ev: MouseEvent) => {
-                      clearTimeout(timer);
-                      handleAdminTrigger(e);
-                      window.removeEventListener('click', handleSecondary);
-                    };
-                    
+
+                    // Actually let's just use the click handler directly to start counting
                     handleAdminTrigger(e);
                   }
                 }}

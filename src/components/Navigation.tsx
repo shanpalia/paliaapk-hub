@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, User, Home, LayoutGrid, LogOut, Settings, History } from "lucide-react";
+import { Search, User, Home, LayoutGrid, LogOut, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
@@ -93,7 +93,6 @@ export function Navigation() {
 
   if (!mounted) return null;
 
-  const isAdmin = user?.email === 'shanpalia786@gmail.com';
   const userInitial = user?.email?.[0]?.toUpperCase() || 'U';
 
   const navLinks = [
@@ -181,16 +180,6 @@ export function Navigation() {
                         <History className="mr-3 h-5 w-5 text-muted-foreground" /> Downloads
                       </DropdownMenuItem>
                     </Link>
-                    {isAdmin && (
-                      <>
-                        <DropdownMenuSeparator className="my-2" />
-                        <Link href="/admin/dashboard">
-                          <DropdownMenuItem className="rounded-xl cursor-pointer font-black text-primary px-4 py-2.5 bg-primary/5">
-                            <Settings className="mr-3 h-5 w-5" /> Admin Console
-                          </DropdownMenuItem>
-                        </Link>
-                      </>
-                    )}
                     <DropdownMenuSeparator className="my-2" />
                     <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive font-black px-4 py-2.5 focus:bg-destructive/5 focus:text-destructive">
                       <LogOut className="mr-3 h-5 w-5" /> Logout

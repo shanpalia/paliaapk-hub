@@ -93,20 +93,22 @@ export default function AdminDashboard() {
       try {
         const { data: { session }, error: authError } = await supabase.auth.getSession();
         
+        // Strict admin check
         if (authError || !session || session.user.email !== "shanpalia786@gmail.com") {
-          router.push("/auth/login?admin=true");
+          toast({ variant: "destructive", title: "Access Denied", description: "You do not have permission to access the console." });
+          router.push("/");
           return;
         }
         
         fetchApps();
       } catch (err: any) {
         setLoading(false);
-        router.push("/auth/login?admin=true");
+        router.push("/");
       }
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, toast]);
 
   const extractPathFromUrl = (url: string, bucket: string) => {
     if (!url || !url.includes(`${bucket}/`)) return null;
