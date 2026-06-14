@@ -24,12 +24,14 @@ export function Navigation() {
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
   
   // Admin trigger state
   const [adminClickCount, setAdminClickCount] = useState(0);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
@@ -45,24 +47,19 @@ export function Navigation() {
   }, []);
 
   const handleAdminTrigger = (e: React.MouseEvent) => {
-    // Intercept navigation/dropdown if we are counting
-    // However, we want to count EVERY click on the profile icon.
-    
-    // Reset timer on every click
+    // We only trigger PIN modal on the 5th click
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
       setAdminClickCount(0);
-      console.log("Admin click counter reset (Top Nav)");
     }, 5000);
 
     const nextCount = adminClickCount + 1;
-    console.log(`Profile click count: ${nextCount}`);
     setAdminClickCount(nextCount);
+    console.log(`Profile click count: ${nextCount}`);
 
     if (nextCount < 5) {
       toast({ title: `Click ${nextCount}/5` });
     } else {
-      // 5th click reached
       e.preventDefault();
       e.stopPropagation();
       setAdminClickCount(0);
@@ -75,7 +72,7 @@ export function Navigation() {
       
       if (pin === "7227") {
         console.log("PIN correct");
-        router.push("/admin/dashboard");
+        router.push("/auth/login?admin=true");
       } else if (pin !== null) {
         console.log("PIN incorrect");
         toast({ 
@@ -93,6 +90,8 @@ export function Navigation() {
     router.push("/");
     router.refresh();
   };
+
+  if (!mounted) return null;
 
   const isAdmin = user?.email === 'shanpalia786@gmail.com';
   const userInitial = user?.email?.[0]?.toUpperCase() || 'U';
@@ -183,12 +182,12 @@ export function Navigation() {
                             <Settings className="mr-2 h-4 w-4" /> Admin Panel
                           </DropdownMenuItem>
                         </Link>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive focus:text-destructive">
+                          <LogOut className="mr-2 h-4 w-4" /> Logout
+                        </DropdownMenuItem>
                       </>
                     )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive focus:text-destructive">
-                      <LogOut className="mr-2 h-4 w-4" /> Logout
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (

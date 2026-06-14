@@ -14,12 +14,14 @@ export function BottomNavigation() {
   const router = useRouter();
   const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Admin trigger state
   const [adminClickCount, setAdminClickCount] = useState(0);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
@@ -34,25 +36,24 @@ export function BottomNavigation() {
     };
   }, []);
 
-  const handleAdminTrigger = (e: React.MouseEvent) => {
-    // Prevent navigation while counting
-    e.preventDefault();
+  if (!mounted || pathname.startsWith('/admin')) return null;
 
-    // Reset timer on every click
+  const handleAdminTrigger = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
       setAdminClickCount(0);
-      console.log("Admin click counter reset (Bottom Nav)");
     }, 5000);
 
     const nextCount = adminClickCount + 1;
-    console.log(`Profile click count: ${nextCount}`);
     setAdminClickCount(nextCount);
+    console.log(`Profile click count: ${nextCount}`);
 
     if (nextCount < 5) {
       toast({ title: `Click ${nextCount}/5` });
     } else {
-      // 5th click reached
       setAdminClickCount(0);
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       
@@ -63,7 +64,7 @@ export function BottomNavigation() {
       
       if (pin === "7227") {
         console.log("PIN correct");
-        router.push("/admin/dashboard");
+        router.push("/auth/login?admin=true");
       } else if (pin !== null) {
         console.log("PIN incorrect");
         toast({ 
@@ -73,16 +74,6 @@ export function BottomNavigation() {
         });
       }
     }
-
-    // If it's just a single click and timer hasn't reached threshold, 
-    // we could navigate, but as per requirements: "Do not navigate while counting".
-    // We'll allow navigation if they stop clicking after one.
-    if (nextCount === 1) {
-       // Logic to wait briefly before normal navigation could go here, 
-       // but for a strict hidden feature, we usually block standard click 
-       // or require specific interaction.
-       // For now, let's strictly follow: "Do not navigate while counting".
-    }
   };
 
   const navItems = [
@@ -91,8 +82,6 @@ export function BottomNavigation() {
     { name: "Categories", href: "/categories", icon: LayoutGrid },
     { name: "Profile", href: "/profile", icon: User },
   ];
-
-  if (pathname.startsWith('/admin')) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 block lg:hidden bg-white border-t rounded-t-[2rem] shadow-[0_-8px_30px_rgb(0,0,0,0.04)] px-6 pb-2 pt-3">
@@ -106,15 +95,23 @@ export function BottomNavigation() {
               <button
                 key={item.href}
                 onClick={(e) => {
-                  handleAdminTrigger(e);
-                  // Standard navigation if no sequence detected after a short while
-                  // is complex here, so we implement the count strictly.
-                  // To actually reach the profile, they'd have to wait for timeout or we add a "go" button.
-                  // But as per instructions: "Do not navigate while counting".
-                  if (adminClickCount === 0) {
-                    const target = session ? "/profile" : "/auth/login";
-                    // Only navigate if they haven't started a sequence
-                    router.push(target);
+                  if (adminClickCount > 0) {
+                    handleAdminTrigger(e);
+                  } else {
+                    // Start counting or navigate
+                    const timer = setTimeout(() => {
+                       const target = session ? "/profile" : "/auth/login";
+                       router.push(target);
+                    }, 300);
+                    
+                    // If they click again quickly, it cancels navigation and counts
+                    const handleSecondary = (ev: MouseEvent) => {
+                      clearTimeout(timer);
+                      handleAdminTrigger(e);
+                      window.removeEventListener('click', handleSecondary);
+                    };
+                    
+                    handleAdminTrigger(e);
                   }
                 }}
                 className={cn(
