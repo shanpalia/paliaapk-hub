@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, User, Home, LayoutGrid, LogOut, History } from "lucide-react";
+import { Search, User, Home, LayoutGrid, LogOut, History, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
@@ -18,6 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export function Navigation() {
   const pathname = usePathname();
@@ -26,9 +32,11 @@ export function Navigation() {
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   
-  // Admin trigger state for Logo
-  const [adminClickCount, setAdminClickCount] = useState(0);
+  // Hidden Admin Trigger State
+  const [logoClickCount, setLogoClickCount] = useState(0);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [pinValue, setPinValue] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -46,65 +54,60 @@ export function Navigation() {
     };
   }, []);
 
-  const handleLogoClick = async (e: React.MouseEvent) => {
-    // Reset timer on every click
+  const handleLogoClick = () => {
+    if (isPinDialogOpen) return;
+
+    // Reset timer
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
-      setAdminClickCount(0);
+      setLogoClickCount(0);
       console.log("Admin click count reset due to timeout");
     }, 5000);
 
-    const nextCount = adminClickCount + 1;
-    setAdminClickCount(nextCount);
+    const nextCount = logoClickCount + 1;
+    setLogoClickCount(nextCount);
     console.log(`Logo click count: ${nextCount}`);
 
     if (nextCount < 5) {
       toast({ title: `Click ${nextCount}/5` });
     } else {
-      // Prevent normal navigation on the 5th click to show PIN prompt
-      e.preventDefault();
-      e.stopPropagation();
-      setAdminClickCount(0);
-      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-      
-      console.log("5th click detected. Opening PIN modal.");
+      console.log("5th click detected. Opening PIN Modal.");
       toast({ title: "Admin Mode Activated" });
-      
-      const pin = window.prompt("Admin Access\n\nEnter Security PIN");
-      
-      if (pin === "7227") {
-        console.log("PIN Correct. Redirecting to Admin Dashboard.");
-        toast({ title: "Opening Admin Dashboard" });
+      setLogoClickCount(0);
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      setPinValue("");
+      setIsPinDialogOpen(true);
+    }
+  };
 
-        // Check if user is already logged in as the admin
-        const { data: { session } } = await supabase.auth.getSession();
-        const isAdminLoggedIn = session?.user?.email === "shanpalia786@gmail.com";
+  const handlePinSubmit = async () => {
+    console.log("PIN Submitted:", pinValue);
+    if (pinValue === "7227") {
+      console.log("PIN Correct");
+      toast({ title: "Opening Admin Dashboard" });
+      setIsPinDialogOpen(false);
 
-        const targetUrl = isAdminLoggedIn ? "/admin/dashboard" : "/auth/login?admin=true";
-        
-        try {
-          console.log(`Navigating to: ${targetUrl}`);
-          router.push(targetUrl);
-          
-          // Fallback if router.push doesn't trigger immediately in some environments
-          setTimeout(() => {
-            if (window.location.pathname !== targetUrl && !window.location.search.includes("admin=true")) {
-               console.warn("router.push fallback triggered");
-               window.location.href = targetUrl;
-            }
-          }, 100);
-        } catch (err) {
-          console.error("Navigation error:", err);
+      const { data: { session } } = await supabase.auth.getSession();
+      const isAdminLoggedIn = session?.user?.email === "shanpalia786@gmail.com";
+
+      const targetUrl = isAdminLoggedIn ? "/admin/dashboard" : "/auth/login?admin=true";
+      console.log(`Redirecting to: ${targetUrl}`);
+      
+      router.push(targetUrl);
+      
+      // Fallback for immediate navigation
+      setTimeout(() => {
+        if (window.location.pathname !== targetUrl && !window.location.search.includes("admin=true")) {
           window.location.href = targetUrl;
         }
-      } else if (pin !== null) {
-        console.log("PIN incorrect");
-        toast({ 
-          variant: "destructive", 
-          title: "Invalid PIN",
-          description: "Access denied."
-        });
-      }
+      }, 300);
+    } else {
+      console.log("PIN Incorrect");
+      toast({ 
+        variant: "destructive", 
+        title: "Invalid Security PIN",
+        description: "Access denied."
+      });
     }
   };
 
@@ -125,104 +128,147 @@ export function Navigation() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-8">
-          <div 
-            onClick={handleLogoClick}
-            className="flex items-center gap-2 select-none group cursor-pointer"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg shadow-primary/20">
-              P
+    <>
+      <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-8">
+            <div 
+              onClick={handleLogoClick}
+              className="flex items-center gap-2 select-none group cursor-pointer"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg shadow-primary/20">
+                P
+              </div>
+              <span className="hidden font-headline text-xl font-black tracking-tight sm:inline-block">
+                PLKAPK Hub
+              </span>
             </div>
-            <span className="hidden font-headline text-xl font-black tracking-tight sm:inline-block">
-              PLKAPK Hub
-            </span>
-          </div>
 
-          <div className="hidden lg:flex items-center space-x-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black transition-colors hover:bg-muted ${
-                  pathname === link.href ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                }`}
-              >
-                <link.icon className="h-4 w-4" />
-                {link.name}
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-1 items-center justify-end gap-4">
-          <div className="hidden w-full max-w-xs md:flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-primary">
-                <Home className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search apps..."
-                className="pl-10 h-10 bg-muted/30 border-none rounded-full font-medium"
-                onFocus={() => router.push("/search")}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div>
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="relative h-10 w-10 rounded-full outline-none focus:ring-2 focus:ring-primary/20 ring-offset-2 transition-all">
-                      <Avatar className="h-10 w-10 border-2 border-primary/20">
-                        <AvatarFallback className="bg-primary text-primary-foreground font-black">
-                          {userInitial}
-                        </AvatarFallback>
-                      </Avatar>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-64 rounded-[2rem] p-3 shadow-2xl border-border/50" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal px-4 py-3">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-base font-black leading-none">{user.email?.split('@')[0]}</p>
-                        <p className="text-xs font-medium leading-none text-muted-foreground">{user.email}</p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator className="my-2" />
-                    <Link href="/profile">
-                      <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
-                        <User className="mr-3 h-5 w-5 text-muted-foreground" /> My Profile
-                      </DropdownMenuItem>
-                    </Link>
-                    <Link href="/profile">
-                      <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
-                        <History className="mr-3 h-5 w-5 text-muted-foreground" /> Downloads
-                      </DropdownMenuItem>
-                    </Link>
-                    <DropdownMenuSeparator className="my-2" />
-                    <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive font-black px-4 py-2.5 focus:bg-destructive/5 focus:text-destructive">
-                      <LogOut className="mr-3 h-5 w-5" /> Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Link href="/auth/login">
-                  <Avatar className="h-10 w-10 border-2 border-muted bg-muted hover:border-primary/20 transition-all cursor-pointer">
-                    <AvatarFallback className="bg-muted text-muted-foreground">
-                      <User className="h-5 w-5" />
-                    </AvatarFallback>
-                  </Avatar>
+            <div className="hidden lg:flex items-center space-x-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black transition-colors hover:bg-muted ${
+                    pathname === link.href ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  <link.icon className="h-4 w-4" />
+                  {link.name}
                 </Link>
-              )}
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-1 items-center justify-end gap-4">
+            <div className="hidden w-full max-w-xs md:flex items-center gap-4">
+              <Link href="/">
+                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-primary">
+                  <Home className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search apps..."
+                  className="pl-10 h-10 bg-muted/30 border-none rounded-full font-medium"
+                  onFocus={() => router.push("/search")}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div>
+                {user ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="relative h-10 w-10 rounded-full outline-none focus:ring-2 focus:ring-primary/20 ring-offset-2 transition-all">
+                        <Avatar className="h-10 w-10 border-2 border-primary/20">
+                          <AvatarFallback className="bg-primary text-primary-foreground font-black">
+                            {userInitial}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-64 rounded-[2rem] p-3 shadow-2xl border-border/50" align="end" forceMount>
+                      <DropdownMenuLabel className="font-normal px-4 py-3">
+                        <div className="flex flex-col space-y-1">
+                          <p className="text-base font-black leading-none">{user.email?.split('@')[0]}</p>
+                          <p className="text-xs font-medium leading-none text-muted-foreground">{user.email}</p>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator className="my-2" />
+                      <Link href="/profile">
+                        <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
+                          <User className="mr-3 h-5 w-5 text-muted-foreground" /> My Profile
+                        </DropdownMenuItem>
+                      </Link>
+                      <Link href="/profile">
+                        <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
+                          <History className="mr-3 h-5 w-5 text-muted-foreground" /> Downloads
+                        </DropdownMenuItem>
+                      </Link>
+                      <DropdownMenuSeparator className="my-2" />
+                      <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive font-black px-4 py-2.5 focus:bg-destructive/5 focus:text-destructive">
+                        <LogOut className="mr-3 h-5 w-5" /> Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Link href="/auth/login">
+                    <Avatar className="h-10 w-10 border-2 border-muted bg-muted hover:border-primary/20 transition-all cursor-pointer">
+                      <AvatarFallback className="bg-muted text-muted-foreground">
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {/* Admin PIN Dialog */}
+      <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+        <DialogContent className="rounded-[2.5rem] sm:max-w-md p-8">
+          <DialogHeader className="items-center text-center">
+            <div className="h-16 w-16 bg-primary/10 rounded-3xl flex items-center justify-center text-primary mb-4">
+              <ShieldAlert className="h-8 w-8" />
+            </div>
+            <DialogTitle className="text-2xl font-black">Admin Access</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-2">
+            <p className="text-sm font-bold text-muted-foreground text-center mb-4">
+              Enter the security PIN to access the administrative console.
+            </p>
+            <Input
+              type="password"
+              placeholder="••••"
+              className="h-16 text-center text-3xl font-black tracking-[1rem] rounded-2xl bg-muted/30 border-none focus-visible:ring-primary"
+              value={pinValue}
+              onChange={(e) => setPinValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handlePinSubmit()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-3">
+            <Button 
+              variant="outline" 
+              className="h-14 rounded-2xl font-black flex-1"
+              onClick={() => setIsPinDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="h-14 rounded-2xl font-black flex-1 shadow-xl shadow-primary/20"
+              onClick={handlePinSubmit}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
