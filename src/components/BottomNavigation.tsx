@@ -16,7 +16,7 @@ export function BottomNavigation() {
   const [session, setSession] = useState<any>(null);
 
   // Admin trigger state
-  const [clickCount, setClickCount] = useState(0);
+  const [adminClickCount, setAdminClickCount] = useState(0);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -35,36 +35,53 @@ export function BottomNavigation() {
   }, []);
 
   const handleAdminTrigger = (e: React.MouseEvent) => {
+    // Prevent navigation while counting
+    e.preventDefault();
+
     // Reset timer on every click
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
-      setClickCount(0);
-      console.log("Admin click counter reset (mobile)");
+      setAdminClickCount(0);
+      console.log("Admin click counter reset (Bottom Nav)");
     }, 5000);
 
-    const nextCount = clickCount + 1;
-    setClickCount(nextCount);
-    console.log(`Admin Trigger Mobile: Click ${nextCount}/5`);
+    const nextCount = adminClickCount + 1;
+    console.log(`Profile click count: ${nextCount}`);
+    setAdminClickCount(nextCount);
 
     if (nextCount < 5) {
       toast({ title: `Click ${nextCount}/5` });
     } else {
-      e.preventDefault();
-      setClickCount(0);
+      // 5th click reached
+      setAdminClickCount(0);
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       
+      console.log("Opening PIN modal");
       toast({ title: "Admin Mode Activated" });
+      
       const pin = window.prompt("Admin Access\n\nEnter Security PIN");
       
       if (pin === "7227") {
+        console.log("PIN correct");
         router.push("/admin/dashboard");
       } else if (pin !== null) {
+        console.log("PIN incorrect");
         toast({ 
           variant: "destructive", 
           title: "Invalid PIN",
           description: "Access denied."
         });
       }
+    }
+
+    // If it's just a single click and timer hasn't reached threshold, 
+    // we could navigate, but as per requirements: "Do not navigate while counting".
+    // We'll allow navigation if they stop clicking after one.
+    if (nextCount === 1) {
+       // Logic to wait briefly before normal navigation could go here, 
+       // but for a strict hidden feature, we usually block standard click 
+       // or require specific interaction.
+       // For now, let's strictly follow: "Do not navigate while counting".
     }
   };
 
@@ -82,14 +99,41 @@ export function BottomNavigation() {
       <div className="flex items-center justify-between max-w-md mx-auto">
         {navItems.map((item) => {
           const isProfile = item.name === "Profile";
-          const finalHref = (isProfile && !session) ? "/auth/login" : item.href;
           const isActive = pathname === item.href;
           
+          if (isProfile) {
+            return (
+              <button
+                key={item.href}
+                onClick={(e) => {
+                  handleAdminTrigger(e);
+                  // Standard navigation if no sequence detected after a short while
+                  // is complex here, so we implement the count strictly.
+                  // To actually reach the profile, they'd have to wait for timeout or we add a "go" button.
+                  // But as per instructions: "Do not navigate while counting".
+                  if (adminClickCount === 0) {
+                    const target = session ? "/profile" : "/auth/login";
+                    // Only navigate if they haven't started a sequence
+                    router.push(target);
+                  }
+                }}
+                className={cn(
+                  "flex flex-col items-center gap-1 transition-all duration-300",
+                  isActive ? "text-primary scale-110" : "text-muted-foreground"
+                )}
+              >
+                <item.icon className={cn("h-6 w-6", isActive && "fill-primary/10")} />
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  {item.name}
+                </span>
+              </button>
+            );
+          }
+
           return (
             <Link
               key={item.href}
-              href={finalHref}
-              onClick={isProfile ? handleAdminTrigger : undefined}
+              href={item.href}
               className={cn(
                 "flex flex-col items-center gap-1 transition-all duration-300",
                 isActive ? "text-primary scale-110" : "text-muted-foreground"

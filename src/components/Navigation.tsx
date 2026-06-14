@@ -26,7 +26,7 @@ export function Navigation() {
   const [user, setUser] = useState<any>(null);
   
   // Admin trigger state
-  const [clickCount, setClickCount] = useState(0);
+  const [adminClickCount, setAdminClickCount] = useState(0);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -45,29 +45,39 @@ export function Navigation() {
   }, []);
 
   const handleAdminTrigger = (e: React.MouseEvent) => {
+    // Intercept navigation/dropdown if we are counting
+    // However, we want to count EVERY click on the profile icon.
+    
     // Reset timer on every click
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
-      setClickCount(0);
-      console.log("Admin click counter reset");
+      setAdminClickCount(0);
+      console.log("Admin click counter reset (Top Nav)");
     }, 5000);
 
-    const nextCount = clickCount + 1;
-    setClickCount(nextCount);
-    console.log(`Admin Trigger: Click ${nextCount}/5`);
+    const nextCount = adminClickCount + 1;
+    console.log(`Profile click count: ${nextCount}`);
+    setAdminClickCount(nextCount);
 
     if (nextCount < 5) {
       toast({ title: `Click ${nextCount}/5` });
     } else {
-      setClickCount(0);
+      // 5th click reached
+      e.preventDefault();
+      e.stopPropagation();
+      setAdminClickCount(0);
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       
+      console.log("Opening PIN modal");
       toast({ title: "Admin Mode Activated" });
+      
       const pin = window.prompt("Admin Access\n\nEnter Security PIN");
       
       if (pin === "7227") {
+        console.log("PIN correct");
         router.push("/admin/dashboard");
       } else if (pin !== null) {
+        console.log("PIN incorrect");
         toast({ 
           variant: "destructive", 
           title: "Invalid PIN",
@@ -131,11 +141,15 @@ export function Navigation() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div onClick={handleAdminTrigger}>
+            <div>
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+                    <Button 
+                      variant="ghost" 
+                      className="relative h-10 w-10 rounded-full p-0"
+                      onClick={handleAdminTrigger}
+                    >
                       <Avatar className="h-10 w-10 border-2 border-primary/20">
                         <AvatarFallback className="bg-primary text-primary-foreground font-black">
                           {userInitial}
@@ -178,13 +192,20 @@ export function Navigation() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Link href="/auth/login">
+                <Button 
+                  variant="ghost" 
+                  className="relative h-10 w-10 rounded-full p-0"
+                  onClick={(e) => {
+                    handleAdminTrigger(e);
+                    if (adminClickCount === 0) router.push("/auth/login");
+                  }}
+                >
                   <Avatar className="h-10 w-10 border-2 border-muted bg-muted hover:border-primary/20 transition-colors">
                     <AvatarFallback className="bg-muted text-muted-foreground">
                       <User className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
-                </Link>
+                </Button>
               )}
             </div>
           </div>
