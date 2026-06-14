@@ -2,17 +2,16 @@ apply plugin: 'com.android.application'
 
 android {
     namespace "com.plkapkhub.store"
-    compileSdk rootProject.ext.compileSdkVersion
+    compileSdk 34
     defaultConfig {
         applicationId "com.plkapkhub.store"
-        minSdk rootProject.ext.minSdkVersion
-        targetSdk rootProject.ext.targetSdkVersion
+        minSdk 23
+        targetSdk 34
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Leaves res/raw files uncompressed, now only for WAV files
-             noCompress 'wav'
+             noCompress 'png'
         }
     }
     buildTypes {
@@ -31,24 +30,16 @@ repositories {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "androidx.appcompat:appcompat:$rootProject.ext.androidxAppCompatVersion"
-    implementation "androidx.coordinatorlayout:coordinatorlayout:$rootProject.ext.androidxCoordinatorLayoutVersion"
-    implementation "androidx.core:core-ktx:$rootProject.ext.androidxCoreVersion"
+    implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation project(':capacitor-android')
     implementation project(':capacitor-cordova-android-plugins')
-    testImplementation "junit:junit:$rootProject.ext.junitVersion"
-    androidTestImplementation "androidx.test.ext:junit:$rootProject.ext.androidxJunitVersion"
-    androidTestImplementation "androidx.test.espresso:espresso-core:$rootProject.ext.androidxEspressoCoreVersion"
 }
 
-apply from: 'capacitor.build.gradle'
-
 try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
+    def servicesConfigPath = 'google-services.json'
+    if (file(servicesConfigPath).exists()) {
         apply plugin: 'com.google.gms.google-services'
     }
 } catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+    logger.warn("google-services.json not found, skipping plugin application")
 }
-    

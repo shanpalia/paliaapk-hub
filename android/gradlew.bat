@@ -14,7 +14,7 @@ set APP_BASE_NAME=%~n0
 set APP_HOME=%DIRNAME%
 
 @rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-set DEFAULT_JVM_OPTS=
+set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
 
 @rem Find java.exe
 if defined JAVA_HOME goto findJavaFromJavaHome
@@ -55,9 +55,9 @@ set CMD_LINE_ARGS=
 set _SKIP=2
 
 :winNT_args_loop
-if %1==() goto execute
-if %_SKIP% leq 0 set CMD_LINE_ARGS=%CMD_LINE_ARGS% %1
-if %_SKIP% gtr 0 set /a _SKIP=%_SKIP%-1
+if %1 == "" goto execute
+
+set CMD_LINE_ARGS=%CMD_LINE_ARGS% %1
 shift
 goto winNT_args_loop
 
@@ -67,9 +67,9 @@ set CMD_LINE_ARGS=
 set _SKIP=2
 
 :win9xME_args_loop
-if %1==() goto execute
-if %_SKIP% leq 0 set CMD_LINE_ARGS=%CMD_LINE_ARGS% %1
-if %_SKIP% gtr 0 set /a _SKIP=%_SKIP%-1
+if %1 == "" goto execute
+
+set CMD_LINE_ARGS=%CMD_LINE_ARGS% %1
 shift
 goto win9xME_args_loop
 
@@ -86,12 +86,12 @@ set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
 if "%ERRORLEVEL%"=="0" goto mainEnd
 
 :fail
-rem Set variable GRADLE_EXIT_CONSOLE if you need the check status from a shell
-if "%GRADLE_EXIT_CONSOLE%"=="1" exit %ERRORLEVEL%
-exit /b %ERRORLEVEL%
+rem Set variable GRADLE_EXIT_CONSOLE if you need the check of return code instead of
+rem calling exit the whole shell
+if not "" == "%GRADLE_EXIT_CONSOLE%" exit 1
+exit /b 1
 
 :mainEnd
 if "%OS%"=="Windows_NT" endlocal
 
 :omega
-    

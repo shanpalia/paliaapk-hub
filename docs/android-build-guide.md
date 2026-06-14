@@ -18,21 +18,31 @@ npm run build
 npm run export
 ```
 
-## 2. Initialize Native Project
+## 2. Initialize Native Project & Gradle Wrapper
 
-If the `android` folder does not exist, initialize it:
+The Gradle Wrapper (`gradle-wrapper.jar`) is a binary file and is not included in the source code directly. To initialize it and the Android project:
 
 ```bash
+# This command initializes the android directory and binary wrapper
 npx cap add android
-```
 
-If it already exists, simply sync the assets:
-
-```bash
+# If the directory already exists, run this to sync and update the wrapper
 npx cap sync
 ```
 
-## 3. Configure Signing (Production)
+## 3. Generate APK (Command Line)
+
+After syncing, you can generate the APK directly:
+
+```bash
+cd android
+./gradlew assembleDebug
+```
+
+The APK will be located at:
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+## 4. Configure Signing (Production)
 
 To release on the Play Store or distribute a signed APK:
 
@@ -43,10 +53,6 @@ To release on the Play Store or distribute a signed APK:
 5. Enter your alias and password.
 6. Select **Release** build variant.
 
-## 4. Performance Optimization
-
-The project is configured to use **ProGuard** for code shrinking and obfuscation. Ensure `minifyEnabled` is set to `true` in `android/app/build.gradle` for production builds.
-
 ## 5. Deployment Checklist
 
 - [ ] Verify `com.plkapkhub.store` is the package name.
@@ -56,8 +62,8 @@ The project is configured to use **ProGuard** for code shrinking and obfuscation
 
 ## 6. Common Issues
 
+### "Could not find or load main class org.gradle.wrapper.GradleWrapperMain"
+This occurs when the binary `gradle-wrapper.jar` is missing. Fix this by running `npx cap sync` on your local machine.
+
 ### "App not installed"
 Ensure you have uninstalled any previous versions of the app with the same package name but different signing certificates.
-
-### Supabase Connectivity
-If using a local emulator, ensure the network settings allow the Android Emulator to access `localhost` (usually via `10.0.2.2`). For production, ensure your Supabase RLS policies allow access from the app's User-Agent.
