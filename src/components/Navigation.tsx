@@ -26,7 +26,7 @@ export function Navigation() {
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   
-  // Admin trigger state
+  // Admin trigger state for Logo
   const [adminClickCount, setAdminClickCount] = useState(0);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -46,7 +46,7 @@ export function Navigation() {
     };
   }, []);
 
-  const handleAdminTrigger = (e: React.MouseEvent) => {
+  const handleLogoClick = (e: React.MouseEvent) => {
     // Reset timer on every click
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
@@ -55,11 +55,12 @@ export function Navigation() {
 
     const nextCount = adminClickCount + 1;
     setAdminClickCount(nextCount);
-    console.log(`Profile click count: ${nextCount}`);
+    console.log(`Logo click count: ${nextCount}`);
 
     if (nextCount < 5) {
       toast({ title: `Click ${nextCount}/5` });
     } else {
+      // Prevent normal navigation on the 5th click to show PIN prompt
       e.preventDefault();
       e.stopPropagation();
       setAdminClickCount(0);
@@ -104,7 +105,11 @@ export function Navigation() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 select-none group">
+          <Link 
+            href="/" 
+            onClick={handleLogoClick}
+            className="flex items-center gap-2 select-none group cursor-pointer"
+          >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg shadow-primary/20">
               P
             </div>
@@ -151,10 +156,7 @@ export function Navigation() {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button 
-                      className="relative h-10 w-10 rounded-full outline-none focus:ring-2 focus:ring-primary/20 ring-offset-2 transition-all"
-                      onClick={handleAdminTrigger}
-                    >
+                    <button className="relative h-10 w-10 rounded-full outline-none focus:ring-2 focus:ring-primary/20 ring-offset-2 transition-all">
                       <Avatar className="h-10 w-10 border-2 border-primary/20">
                         <AvatarFallback className="bg-primary text-primary-foreground font-black">
                           {userInitial}
@@ -187,19 +189,13 @@ export function Navigation() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <button 
-                  className="relative h-10 w-10 rounded-full outline-none hover:ring-2 hover:ring-muted transition-all"
-                  onClick={(e) => {
-                    handleAdminTrigger(e);
-                    if (adminClickCount === 0) router.push("/auth/login");
-                  }}
-                >
-                  <Avatar className="h-10 w-10 border-2 border-muted bg-muted hover:border-primary/20 transition-colors">
+                <Link href="/auth/login">
+                  <Avatar className="h-10 w-10 border-2 border-muted bg-muted hover:border-primary/20 transition-all cursor-pointer">
                     <AvatarFallback className="bg-muted text-muted-foreground">
                       <User className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
-                </button>
+                </Link>
               )}
             </div>
           </div>
