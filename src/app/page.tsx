@@ -24,10 +24,14 @@ export default function Home() {
           .select('*')
           .order('created_at', { ascending: false });
         
-        if (error) throw error;
-        setApps(data || []);
-      } catch (err) {
-        console.error("Error fetching apps:", err);
+        if (error) {
+          console.error("Supabase error fetching apps:", error.message, error.details);
+          setApps([]);
+        } else {
+          setApps(data || []);
+        }
+      } catch (err: any) {
+        console.error("Unexpected fetch error:", err.message || err);
       } finally {
         setLoading(false);
       }
@@ -66,7 +70,7 @@ export default function Home() {
             </div>
             <div className="hidden md:block relative h-[400px]">
                <Image
-                src={heroImage?.imageUrl!}
+                src={heroImage?.imageUrl || "https://picsum.photos/seed/tech/800/400"}
                 alt="Modern Tech"
                 fill
                 className="object-cover rounded-[2rem] shadow-2xl rotate-1 border-8 border-white"
@@ -115,7 +119,7 @@ export default function Home() {
                   name={app.app_name}
                   category={app.category || "General"}
                   version={app.version}
-                  rating={4.5} // Default rating or fetch from another table
+                  rating={4.5}
                   iconUrl={app.image_url || PlaceHolderImages[0].imageUrl}
                 />
               ))}
