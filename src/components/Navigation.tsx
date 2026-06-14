@@ -46,11 +46,12 @@ export function Navigation() {
     };
   }, []);
 
-  const handleLogoClick = (e: React.MouseEvent) => {
+  const handleLogoClick = async (e: React.MouseEvent) => {
     // Reset timer on every click
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
       setAdminClickCount(0);
+      console.log("Admin click count reset due to timeout");
     }, 5000);
 
     const nextCount = adminClickCount + 1;
@@ -66,14 +67,36 @@ export function Navigation() {
       setAdminClickCount(0);
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       
-      console.log("Opening PIN modal");
+      console.log("5th click detected. Opening PIN modal.");
       toast({ title: "Admin Mode Activated" });
       
       const pin = window.prompt("Admin Access\n\nEnter Security PIN");
       
       if (pin === "7227") {
-        console.log("PIN correct");
-        router.push("/auth/login?admin=true");
+        console.log("PIN Correct. Redirecting to Admin Dashboard.");
+        toast({ title: "Opening Admin Dashboard" });
+
+        // Check if user is already logged in as the admin
+        const { data: { session } } = await supabase.auth.getSession();
+        const isAdminLoggedIn = session?.user?.email === "shanpalia786@gmail.com";
+
+        const targetUrl = isAdminLoggedIn ? "/admin/dashboard" : "/auth/login?admin=true";
+        
+        try {
+          console.log(`Navigating to: ${targetUrl}`);
+          router.push(targetUrl);
+          
+          // Fallback if router.push doesn't trigger immediately in some environments
+          setTimeout(() => {
+            if (window.location.pathname !== targetUrl && !window.location.search.includes("admin=true")) {
+               console.warn("router.push fallback triggered");
+               window.location.href = targetUrl;
+            }
+          }, 100);
+        } catch (err) {
+          console.error("Navigation error:", err);
+          window.location.href = targetUrl;
+        }
       } else if (pin !== null) {
         console.log("PIN incorrect");
         toast({ 
@@ -105,8 +128,7 @@ export function Navigation() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link 
-            href="/" 
+          <div 
             onClick={handleLogoClick}
             className="flex items-center gap-2 select-none group cursor-pointer"
           >
@@ -116,7 +138,7 @@ export function Navigation() {
             <span className="hidden font-headline text-xl font-black tracking-tight sm:inline-block">
               PLKAPK Hub
             </span>
-          </Link>
+          </div>
 
           <div className="hidden lg:flex items-center space-x-1">
             {navLinks.map((link) => (
