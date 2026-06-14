@@ -102,7 +102,14 @@ export default function AddAppPage() {
       const iconExt = imageFile!.name.split('.').pop();
       const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${iconExt}`;
       const { error: iconError } = await supabase.storage.from('app-icons').upload(iconPath, imageFile!);
-      if (iconError) throw iconError;
+      
+      if (iconError) {
+        throw { 
+          source: 'Storage Bucket: app-icons',
+          ...iconError 
+        };
+      }
+      
       const { data: { publicUrl: iconUrl } } = supabase.storage.from('app-icons').getPublicUrl(iconPath);
       setUploadProgress(40);
 
@@ -110,7 +117,14 @@ export default function AddAppPage() {
       const apkExt = apkFile!.name.split('.').pop();
       const apkPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${apkExt}`;
       const { error: apkError } = await supabase.storage.from('apk-files').upload(apkPath, apkFile!);
-      if (apkError) throw apkError;
+      
+      if (apkError) {
+        throw { 
+          source: 'Storage Bucket: apk-files',
+          ...apkError 
+        };
+      }
+
       const { data: { publicUrl: apkUrl } } = supabase.storage.from('apk-files').getPublicUrl(apkPath);
       setUploadProgress(70);
 
@@ -120,7 +134,14 @@ export default function AddAppPage() {
         const ssExt = screenshotFile.name.split('.').pop();
         const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ssExt}`;
         const { error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
-        if (ssError) throw ssError;
+        
+        if (ssError) {
+          throw { 
+            source: 'Storage Bucket: screenshots',
+            ...ssError 
+          };
+        }
+
         const { data: { publicUrl: ssUrl } } = supabase.storage.from('screenshots').getPublicUrl(ssPath);
         screenshotUrl = ssUrl;
       }
@@ -134,13 +155,16 @@ export default function AddAppPage() {
         icon_url: iconUrl,
         version: formData.version,
         apk_url: apkUrl,
+        screenshot_url: screenshotUrl,
         downloads: 0,
         created_at: new Date().toISOString()
       });
 
       if (dbError) {
-        console.error("Supabase Database Error:", dbError);
-        throw new Error(`Database insert failed: ${dbError.message} (${dbError.code})`);
+        throw { 
+          source: 'Database Table: apps',
+          ...dbError 
+        };
       }
 
       setUploadProgress(100);
@@ -148,7 +172,25 @@ export default function AddAppPage() {
       router.push("/admin/dashboard");
     } catch (err: any) {
       console.error("Upload process error:", err);
-      toast({ variant: "destructive", title: "Publishing failed", description: err.message });
+      
+      // Detailed error breakdown
+      const errorDetails = `
+        Source: ${err.source || 'Unknown'}
+        Message: ${err.message || 'No message provided'}
+        Code: ${err.code || 'No code'}
+        Details: ${err.details || 'No additional details'}
+        Hint: ${err.hint || 'No hint available'}
+      `.trim();
+
+      toast({ 
+        variant: "destructive", 
+        title: "Publishing Failed", 
+        description: (
+          <div className="mt-2 space-y-1 text-[10px] font-mono whitespace-pre-wrap max-h-[200px] overflow-auto">
+            {errorDetails}
+          </div>
+        )
+      });
       setUploadProgress(0);
     } finally {
       setLoading(false);
