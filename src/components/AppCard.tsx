@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -5,6 +6,7 @@ import Link from "next/link";
 import { Star, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 
 interface AppCardProps {
   id: string;
@@ -16,6 +18,14 @@ interface AppCardProps {
 }
 
 export function AppCard({ id, name, category, version, rating, iconUrl }: AppCardProps) {
+  const router = useRouter();
+
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/apps/${id}`);
+  };
+
   return (
     <Card className="group relative overflow-hidden border border-border/50 bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 rounded-[1.5rem] flex flex-col">
       <CardContent className="p-4 flex flex-col h-full">
@@ -46,10 +56,7 @@ export function AppCard({ id, name, category, version, rating, iconUrl }: AppCar
         <div className="mt-auto">
           <Button 
             className="w-full rounded-xl h-10 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/10"
-            onClick={(e) => {
-              e.preventDefault();
-              // Download logic placeholder
-            }}
+            onClick={handleDownloadClick}
           >
             <Download className="mr-2 h-4 w-4" /> Download
           </Button>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -104,6 +105,7 @@ export default function Home() {
                 alt="Modern Tech"
                 fill
                 className="object-cover rounded-[2rem] shadow-2xl rotate-1 border-8 border-white"
+                data-ai-hint="technology abstract"
               />
             </div>
           </div>
@@ -152,7 +154,7 @@ export default function Home() {
                   category={app.category || "General"}
                   version={app.version}
                   rating={4.5}
-                  iconUrl={app.icon_url || PlaceHolderImages[0].imageUrl}
+                  iconUrl={app.icon_url || "https://picsum.photos/seed/app/128/128"}
                 />
               ))}
             </div>
