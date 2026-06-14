@@ -21,6 +21,7 @@ export default function AddAppPage() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState("Preparing assets");
   const [formData, setFormData] = useState({
     name: "",
     version: "",
@@ -111,24 +112,27 @@ export default function AddAppPage() {
 
     setLoading(true);
     setUploadProgress(5);
-    let currentPhase = "Preparing assets";
+    let phase = "Preparing assets";
+    setCurrentPhase(phase);
     
     try {
       // 1. Upload Icon
-      currentPhase = "Uploading App Icon (Bucket: app-icons)";
+      phase = "Uploading App Icon (Bucket: app-icons)";
+      setCurrentPhase(phase);
       const iconExt = imageFile!.name.split('.').pop();
       const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${iconExt}`;
       const { data: iconData, error: iconError } = await supabase.storage
         .from('app-icons')
         .upload(iconPath, imageFile!);
       
-      if (iconError) throw { ...iconError, phase: currentPhase };
+      if (iconError) throw { ...iconError, phase };
       
       const { data: { publicUrl: iconUrl } } = supabase.storage.from('app-icons').getPublicUrl(iconPath);
       setUploadProgress(30);
 
       // 2. Upload APK
-      currentPhase = "Uploading APK Package (Bucket: apk-files)";
+      phase = "Uploading APK Package (Bucket: apk-files)";
+      setCurrentPhase(phase);
       const apkOriginalName = apkFile!.name;
       const apkExt = apkOriginalName.split('.').pop();
       const apkPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${apkExt}`;
@@ -136,7 +140,7 @@ export default function AddAppPage() {
         .from('apk-files')
         .upload(apkPath, apkFile!);
       
-      if (apkError) throw { ...apkError, phase: currentPhase };
+      if (apkError) throw { ...apkError, phase };
 
       const { data: { publicUrl: apkUrl } } = supabase.storage.from('apk-files').getPublicUrl(apkPath);
       setUploadProgress(60);
@@ -144,12 +148,13 @@ export default function AddAppPage() {
       // 3. Optional Screenshot
       let screenshotUrl = "";
       if (screenshotFile) {
-        currentPhase = "Uploading Screenshot (Bucket: screenshots)";
+        phase = "Uploading Screenshot (Bucket: screenshots)";
+        setCurrentPhase(phase);
         const ssExt = screenshotFile.name.split('.').pop();
         const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ssExt}`;
         const { error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
         
-        if (ssError) throw { ...ssError, phase: currentPhase };
+        if (ssError) throw { ...ssError, phase };
 
         const { data: { publicUrl: ssUrl } } = supabase.storage.from('screenshots').getPublicUrl(ssPath);
         screenshotUrl = ssUrl;
@@ -157,7 +162,8 @@ export default function AddAppPage() {
       setUploadProgress(85);
 
       // 4. Insert into Database
-      currentPhase = "Saving Application Metadata (Table: apps)";
+      phase = "Saving Application Metadata (Table: apps)";
+      setCurrentPhase(phase);
       const { error: dbError } = await supabase.from('apps').insert({
         app_name: formData.name,
         category: formData.category,
@@ -171,14 +177,14 @@ export default function AddAppPage() {
         created_at: new Date().toISOString()
       });
 
-      if (dbError) throw { ...dbError, phase: currentPhase };
+      if (dbError) throw { ...dbError, phase };
 
       setUploadProgress(100);
       toast({ title: "Success!", description: "App published successfully." });
       router.push("/admin/dashboard");
     } catch (err: any) {
       console.group("Publishing Diagnostics Failed");
-      console.error("Phase:", err.phase || currentPhase);
+      console.error("Phase:", err.phase || phase);
       console.error("Error Message:", err.message || "No error message provided");
       console.error("Error Code:", err.code || "No code");
       if (err.details) console.error("Details:", err.details);
