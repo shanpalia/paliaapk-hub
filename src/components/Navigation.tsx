@@ -1,11 +1,10 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, User, Menu, Home, LayoutGrid, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +14,8 @@ export function Navigation() {
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
+  const [clickCount, setClickCount] = useState(0);
+  const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -27,11 +28,41 @@ export function Navigation() {
 
     return () => {
       subscription.unsubscribe();
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, []);
 
   const handleLogoClick = () => {
-    alert("Logo clicked");
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+
+    // Reset counter if no click within 5 seconds
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = setTimeout(() => {
+      setClickCount(0);
+    }, 5000);
+
+    if (newCount < 5) {
+      toast({
+        title: `Click ${newCount}/5`,
+        description: "You are discovering a hidden path...",
+      });
+    } else {
+      setClickCount(0);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      
+      toast({ title: "Secret mode activated!" });
+      
+      const pin = prompt("Enter Security PIN");
+      if (pin === "7227") {
+        router.push("/auth/login?admin=true");
+      } else if (pin !== null) {
+        toast({
+          variant: "destructive",
+          title: "Invalid Security PIN",
+        });
+      }
+    }
   };
 
   const navLinks = [
@@ -44,6 +75,8 @@ export function Navigation() {
     await supabase.auth.signOut();
     router.refresh();
   };
+
+  const isAdmin = user?.email === 'shanpalia786@gmail.com';
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
@@ -92,11 +125,13 @@ export function Navigation() {
             </Button>
             
             {user ? (
-              <div className="flex items-center gap-2">
-                <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-full px-4 h-10 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold">
-                  Logout
-                </Button>
-              </div>
+              isAdmin && (
+                <div className="flex items-center gap-2">
+                  <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-full px-4 h-10 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold">
+                    Logout
+                  </Button>
+                </div>
+              )
             ) : (
               <Link href="/auth/login">
                 <Button variant="outline" size="sm" className="rounded-full px-4 h-10 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold">
