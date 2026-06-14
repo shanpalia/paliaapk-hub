@@ -199,7 +199,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-3">
                            <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
                               <Image 
-                                src={app.image_url || "https://picsum.photos/seed/app/40/40"} 
+                                src={app.icon_url || "https://picsum.photos/seed/app/40/40"} 
                                 alt={app.app_name} 
                                 fill 
                                 className="object-cover" 

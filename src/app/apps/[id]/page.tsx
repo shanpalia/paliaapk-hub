@@ -61,7 +61,6 @@ export default function AppDetailsPage() {
           clearInterval(interval);
           setTimeout(() => setDownloadProgress(null), 2000);
           
-          // Increment download counter
           supabase.from('apps').update({ downloads: (app.downloads || 0) + 1 }).eq('id', id).then();
           
           window.open(app.apk_url, '_blank');
@@ -89,13 +88,12 @@ export default function AppDetailsPage() {
           <ChevronLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-1" /> Back to Marketplace
         </Link>
 
-        {/* Hero Area */}
         <div className="bg-card rounded-[2.5rem] p-6 md:p-10 border border-border/50 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
           
           <div className="flex flex-col md:flex-row gap-8 relative z-10">
             <div className="h-32 w-32 md:h-44 md:w-44 rounded-[2.5rem] shadow-2xl shadow-primary/10 overflow-hidden bg-white border-4 border-white flex-shrink-0 mx-auto md:mx-0">
-              <Image src={app.image_url || "https://picsum.photos/seed/app/200/200"} alt={app.app_name} width={176} height={176} className="object-cover" />
+              <Image src={app.icon_url || "https://picsum.photos/seed/app/200/200"} alt={app.app_name} width={176} height={176} className="object-cover" />
             </div>
             
             <div className="flex-1 space-y-6 text-center md:text-left">
@@ -144,7 +142,6 @@ export default function AppDetailsPage() {
           </div>
         </div>
 
-        {/* Screenshot Gallery if available */}
         {app.screenshot_url && (
           <div className="mt-12 space-y-4">
             <h2 className="text-2xl font-black flex items-center gap-2">

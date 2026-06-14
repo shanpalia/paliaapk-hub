@@ -76,7 +76,6 @@ export default function Home() {
           </Alert>
         )}
 
-        {/* Hero Section */}
         <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary/10 via-white to-transparent p-8 md:p-16 border border-primary/5">
           <div className="relative z-10 grid gap-8 md:grid-cols-2 items-center">
             <div className="space-y-6">
@@ -110,7 +109,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Apps Grid Section */}
         <section className="space-y-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -154,14 +152,13 @@ export default function Home() {
                   category={app.category || "General"}
                   version={app.version}
                   rating={4.5}
-                  iconUrl={app.image_url || PlaceHolderImages[0].imageUrl}
+                  iconUrl={app.icon_url || PlaceHolderImages[0].imageUrl}
                 />
               ))}
             </div>
           )}
         </section>
 
-        {/* Feature Highlights */}
         <section className="grid gap-6 md:grid-cols-3">
           {[
             { title: "Safe & Secure", desc: "Every APK is scanned and verified before publishing." },

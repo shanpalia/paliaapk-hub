@@ -103,7 +103,7 @@ export default function AddAppPage() {
       const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${iconExt}`;
       const { error: iconError } = await supabase.storage.from('app-icons').upload(iconPath, imageFile!);
       if (iconError) throw iconError;
-      const { data: { publicUrl: imageUrl } } = supabase.storage.from('app-icons').getPublicUrl(iconPath);
+      const { data: { publicUrl: iconUrl } } = supabase.storage.from('app-icons').getPublicUrl(iconPath);
       setUploadProgress(40);
 
       // 2. Upload APK
@@ -126,25 +126,29 @@ export default function AddAppPage() {
       }
       setUploadProgress(90);
 
-      // 4. Insert into Database
+      // 4. Insert into Database with exact columns
       const { error: dbError } = await supabase.from('apps').insert({
         app_name: formData.name,
-        version: formData.version,
-        description: formData.description,
         category: formData.category,
-        image_url: imageUrl,
+        description: formData.description,
+        icon_url: iconUrl,
+        version: formData.version,
         apk_url: apkUrl,
-        screenshot_url: screenshotUrl,
-        downloads: 0
+        downloads: 0,
+        created_at: new Date().toISOString()
       });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Supabase Database Error:", dbError);
+        throw new Error(`Database insert failed: ${dbError.message} (${dbError.code})`);
+      }
 
       setUploadProgress(100);
       toast({ title: "Success!", description: "App published successfully." });
       router.push("/admin/dashboard");
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Upload failed", description: err.message });
+      console.error("Upload process error:", err);
+      toast({ variant: "destructive", title: "Publishing failed", description: err.message });
       setUploadProgress(0);
     } finally {
       setLoading(false);
@@ -166,7 +170,6 @@ export default function AddAppPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {/* App Icon Upload */}
             <div className="space-y-3">
               <Label className="font-bold">App Icon *</Label>
               <div 
@@ -197,7 +200,6 @@ export default function AddAppPage() {
               {imageFile && <p className="text-[10px] font-bold text-primary truncate text-center">{imageFile.name}</p>}
             </div>
 
-            {/* APK Upload */}
             <div className="space-y-3">
               <Label className="font-bold">APK File *</Label>
               <div 
@@ -219,7 +221,6 @@ export default function AddAppPage() {
               {apkFile && <p className="text-[10px] font-bold text-primary truncate text-center">{apkFile.name}</p>}
             </div>
 
-            {/* Screenshot Upload */}
             <div className="space-y-3">
               <Label className="font-bold">Screenshot (Opt)</Label>
               <div 

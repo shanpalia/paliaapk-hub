@@ -16,7 +16,7 @@ export type AppData = {
   app_name: string;
   version: string;
   description: string;
-  image_url: string;
+  icon_url: string;
   apk_url: string;
   screenshot_url?: string;
   downloads: number;

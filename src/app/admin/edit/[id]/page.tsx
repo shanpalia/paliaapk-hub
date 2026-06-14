@@ -23,7 +23,7 @@ export default function EditAppPage() {
     version: "",
     description: "",
     category: "General",
-    image_url: "",
+    icon_url: "",
     apk_url: "",
     screenshot_url: ""
   });
@@ -49,7 +49,7 @@ export default function EditAppPage() {
             version: data.version,
             description: data.description,
             category: data.category || "General",
-            image_url: data.image_url,
+            icon_url: data.icon_url,
             apk_url: data.apk_url,
             screenshot_url: data.screenshot_url || ""
           });
@@ -73,20 +73,18 @@ export default function EditAppPage() {
 
     setSaving(true);
     try {
-      let imageUrl = formData.image_url;
+      let icon_url = formData.icon_url;
       let apkUrl = formData.apk_url;
       let screenshotUrl = formData.screenshot_url;
 
-      // 1. Icon Update
       if (imageFile) {
         const ext = imageFile.name.split('.').pop();
         const path = `${Date.now()}.${ext}`;
         await supabase.storage.from('app-icons').upload(path, imageFile);
         const { data: { publicUrl } } = supabase.storage.from('app-icons').getPublicUrl(path);
-        imageUrl = publicUrl;
+        icon_url = publicUrl;
       }
 
-      // 2. APK Update
       if (apkFile) {
         const ext = apkFile.name.split('.').pop();
         const path = `${Date.now()}.${ext}`;
@@ -95,7 +93,6 @@ export default function EditAppPage() {
         apkUrl = publicUrl;
       }
 
-      // 3. Screenshot Update
       if (screenshotFile) {
         const ext = screenshotFile.name.split('.').pop();
         const path = `${Date.now()}.${ext}`;
@@ -104,13 +101,12 @@ export default function EditAppPage() {
         screenshotUrl = publicUrl;
       }
 
-      // 4. Update DB
       const { error: dbError } = await supabase.from('apps').update({
         app_name: formData.name,
-        version: formData.version,
-        description: formData.description,
         category: formData.category,
-        image_url: imageUrl,
+        description: formData.description,
+        icon_url: icon_url,
+        version: formData.version,
         apk_url: apkUrl,
         screenshot_url: screenshotUrl
       }).eq('id', id);
