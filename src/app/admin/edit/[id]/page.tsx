@@ -12,7 +12,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2, ArrowLeft, Save, Image as ImageIcon, FileArchive, Sparkles, X } from "lucide-react";
+import { Upload, Loader2, ArrowLeft, Save, Image as ImageIcon, FileArchive, Sparkles, X, Home } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateAppDescription } from "@/ai/flows/generate-app-description";
