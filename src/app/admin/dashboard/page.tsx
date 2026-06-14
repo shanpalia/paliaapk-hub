@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -14,7 +15,8 @@ import {
   Package, 
   BarChart3,
   Search,
-  Grid
+  Grid,
+  Loader2
 } from "lucide-react";
 import { 
   Table, 
@@ -26,20 +28,68 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { useEffect, useState } from "react";
+import { supabase, AppData } from "@/lib/supabase";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
-  const stats = [
-    { label: "Total Apps", value: "48", icon: Package, color: "text-blue-500" },
-    { label: "Active Users", value: "1,240", icon: Users, color: "text-green-500" },
-    { label: "Downloads (Monthly)", value: "12.4K", icon: TrendingUp, color: "text-primary" },
-    { label: "Storage Used", value: "14.2 GB", icon: BarChart3, color: "text-purple-500" },
-  ];
+  const [apps, setApps] = useState<AppData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const recentApps = [
-    { id: "1", name: "WhatsApp", category: "Social", version: "2.23.4", downloads: "5B+", date: "2023-12-15", icon: PlaceHolderImages.find(i => i.id === "app-icon-1")?.imageUrl! },
-    { id: "2", name: "Notion", category: "Productivity", version: "0.24.11", downloads: "10M+", date: "2023-12-12", icon: PlaceHolderImages.find(i => i.id === "app-icon-3")?.imageUrl! },
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.email !== "shanpalia786@gmail.com") {
+        router.push("/auth/login");
+        return;
+      }
+      fetchApps();
+    };
+
+    const fetchApps = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('apps')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        setApps(data || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+
+    try {
+      const { error } = await supabase.from('apps').delete().eq('id', id);
+      if (error) throw error;
+      
+      setApps(apps.filter(app => app.id !== id));
+      toast({ title: "App deleted successfully" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to delete app", description: err.message });
+    }
+  };
+
+  const totalDownloads = apps.reduce((sum, app) => sum + (app.downloads || 0), 0);
+
+  const stats = [
+    { label: "Total Apps", value: apps.length.toString(), icon: Package, color: "text-blue-500" },
+    { label: "Total Downloads", value: totalDownloads.toLocaleString(), icon: TrendingUp, color: "text-primary" },
+    { label: "Active Categories", value: Array.from(new Set(apps.map(a => a.category))).length.toString(), icon: Grid, color: "text-green-500" },
+    { label: "System Status", value: "Online", icon: BarChart3, color: "text-purple-500" },
   ];
 
   return (
@@ -53,12 +103,11 @@ export default function AdminDashboard() {
             <p className="text-muted-foreground">Manage your marketplace repository and monitor performance.</p>
           </div>
           <div className="flex gap-2">
-            <Button className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">
-              <Plus className="mr-2 h-4 w-4" /> Upload New App
-            </Button>
-            <Button variant="outline" size="icon" className="rounded-xl border-border bg-white">
-              <Settings className="h-5 w-5" />
-            </Button>
+            <Link href="/admin/add">
+              <Button className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">
+                <Plus className="mr-2 h-4 w-4" /> Upload New App
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -92,94 +141,57 @@ export default function AdminDashboard() {
           </div>
           
           <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-card">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="border-border">
-                  <TableHead className="font-bold">Application</TableHead>
-                  <TableHead className="font-bold">Version</TableHead>
-                  <TableHead className="font-bold">Category</TableHead>
-                  <TableHead className="font-bold">Downloads</TableHead>
-                  <TableHead className="font-bold">Last Updated</TableHead>
-                  <TableHead className="text-right font-bold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentApps.map((app) => (
-                  <TableRow key={app.id} className="border-border hover:bg-muted/10 transition-colors">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                         <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                            <Image src={app.icon} alt={app.name} width={40} height={40} className="object-cover" />
-                         </div>
-                         <span>{app.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">{app.version}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-normal border-primary/20 text-primary">{app.category}</Badge>
-                    </TableCell>
-                    <TableCell className="font-bold">{app.downloads}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{app.date}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                            <Edit className="h-4 w-4" />
-                         </Button>
-                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive/80">
-                            <Trash2 className="h-4 w-4" />
-                         </Button>
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
+            ) : (
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="border-border">
+                    <TableHead className="font-bold">Application</TableHead>
+                    <TableHead className="font-bold">Version</TableHead>
+                    <TableHead className="font-bold">Category</TableHead>
+                    <TableHead className="font-bold">Downloads</TableHead>
+                    <TableHead className="font-bold">Uploaded On</TableHead>
+                    <TableHead className="text-right font-bold">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        </div>
-
-        {/* Categories Section */}
-        <div className="grid gap-6 md:grid-cols-2">
-           <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-card">
-             <CardHeader className="border-b bg-muted/10">
-                <CardTitle className="text-lg flex items-center gap-2">
-                   <Grid className="h-5 w-5 text-primary" /> Manage Categories
-                </CardTitle>
-             </CardHeader>
-             <CardContent className="p-6">
-                <div className="space-y-4">
-                   {["Productivity", "Social", "Action", "Photography"].map((cat) => (
-                     <div key={cat} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-colors border border-transparent hover:border-border">
-                        <span className="font-medium">{cat}</span>
-                        <div className="flex gap-2">
-                           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">Edit</Button>
-                           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive">Delete</Button>
+                </TableHeader>
+                <TableBody>
+                  {apps.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">No apps found</TableCell></TableRow>
+                  ) : apps.map((app) => (
+                    <TableRow key={app.id} className="border-border hover:bg-muted/10 transition-colors">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                           <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                              <Image src={app.image_url || "/placeholder.png"} alt={app.app_name} width={40} height={40} className="object-cover" />
+                           </div>
+                           <span>{app.app_name}</span>
                         </div>
-                     </div>
-                   ))}
-                   <Button variant="outline" className="w-full rounded-xl border-dashed border-2 hover:bg-muted">
-                      <Plus className="mr-2 h-4 w-4" /> Add Category
-                   </Button>
-                </div>
-             </CardContent>
-           </Card>
-
-           <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-card">
-             <CardHeader className="border-b bg-muted/10">
-                <CardTitle className="text-lg flex items-center gap-2">
-                   <Users className="h-5 w-5 text-primary" /> User Moderation
-                </CardTitle>
-             </CardHeader>
-             <CardContent className="p-6 flex flex-col items-center justify-center text-center py-12 space-y-4">
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                   <Users className="h-8 w-8" />
-                </div>
-                <div>
-                   <h4 className="font-bold">Review Registered Users</h4>
-                   <p className="text-sm text-muted-foreground max-w-[240px]">Monitor user activity and manage membership permissions from here.</p>
-                </div>
-                <Button variant="secondary" className="rounded-xl px-8">Manage All Users</Button>
-             </CardContent>
-           </Card>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-xs">{app.version}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-normal border-primary/20 text-primary">{app.category}</Badge>
+                      </TableCell>
+                      <TableCell className="font-bold">{app.downloads}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{new Date(app.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                           <Link href={`/admin/edit/${app.id}`}>
+                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                <Edit className="h-4 w-4" />
+                             </Button>
+                           </Link>
+                           <Button onClick={() => handleDelete(app.id, app.app_name)} variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive/80">
+                              <Trash2 className="h-4 w-4" />
+                           </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
         </div>
       </main>
     </div>

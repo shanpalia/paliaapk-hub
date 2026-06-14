@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -12,38 +13,47 @@ import {
   Share2,
   Bookmark,
   ChevronLeft,
-  Info
+  Info,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase, AppData } from "@/lib/supabase";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { useParams } from "next/navigation";
 
-export default function AppDetailsPage({ params }: { params: { id: string } }) {
+export default function AppDetailsPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const [app, setApp] = useState<AppData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
 
-  // Fallback if ID doesn't match a specific mock (for UI demo)
-  const app = {
-    id: params.id,
-    name: "Notion - Notes, Docs, Tasks",
-    developer: "Notion Labs, Inc.",
-    category: "Productivity",
-    rating: 4.7,
-    reviews: "124K",
-    downloads: "10M+",
-    size: "42 MB",
-    version: "0.24.11",
-    lastUpdated: "Dec 12, 2023",
-    description: "Notion is the all-in-one workspace for your notes, tasks, wikis, and databases. Create custom workflows that fit your team's needs. Seamlessly sync between your computer and phone. Used by millions every day to organize their lives and work.\n\nCapture thoughts, manage projects, or even run an entire company — and do it exactly the way you want.",
-    iconUrl: PlaceHolderImages.find(i => i.id === "app-icon-3")?.imageUrl!,
-    screenshots: [
-      PlaceHolderImages.find(i => i.id === "screenshot-1")?.imageUrl!,
-      PlaceHolderImages.find(i => i.id === "screenshot-2")?.imageUrl!,
-      PlaceHolderImages.find(i => i.id === "screenshot-3")?.imageUrl!,
-    ]
-  };
+  useEffect(() => {
+    const fetchApp = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('apps')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (error) throw error;
+        setApp(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleDownload = () => {
+    if (id) fetchApp();
+  }, [id]);
+
+  const handleDownload = async () => {
+    if (!app) return;
+    
     setDownloadProgress(0);
     const interval = setInterval(() => {
       setDownloadProgress((prev) => {
@@ -51,12 +61,44 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
         if (prev >= 100) {
           clearInterval(interval);
           setTimeout(() => setDownloadProgress(null), 2000);
+          
+          // Increment download counter in Supabase
+          supabase.from('apps').update({ downloads: (app.downloads || 0) + 1 }).eq('id', id);
+          
+          // Trigger actual download
+          window.open(app.apk_url, '_blank');
           return 100;
         }
         return prev + 10;
       });
     }, 200);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navigation />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!app) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="container mx-auto px-4 py-24 text-center">
+          <h1 className="text-4xl font-black">App Not Found</h1>
+          <p className="text-muted-foreground mt-4">The application you are looking for does not exist.</p>
+          <Link href="/">
+            <Button className="mt-8 rounded-full">Back to Marketplace</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,15 +115,15 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
           
           <div className="flex flex-col md:flex-row gap-8 relative z-10">
             <div className="h-32 w-32 md:h-44 md:w-44 rounded-[2.5rem] shadow-2xl shadow-primary/10 overflow-hidden bg-white border-4 border-white flex-shrink-0 mx-auto md:mx-0">
-              <Image src={app.iconUrl} alt={app.name} width={176} height={176} className="object-cover" />
+              <Image src={app.image_url || "/placeholder.png"} alt={app.app_name} width={176} height={176} className="object-cover" />
             </div>
             
             <div className="flex-1 space-y-6 text-center md:text-left">
               <div>
-                <h1 className="text-3xl md:text-5xl font-black tracking-tight">{app.name}</h1>
-                <p className="text-primary font-black text-lg mt-2">{app.developer}</p>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight">{app.app_name}</h1>
+                <p className="text-primary font-black text-lg mt-2">Verified Developer</p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
-                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none px-4 py-1 font-bold">#1 {app.category}</Badge>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none px-4 py-1 font-bold">{app.category}</Badge>
                   <Badge variant="outline" className="border-border rounded-full px-4">Official Release</Badge>
                 </div>
               </div>
@@ -89,12 +131,12 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
               <div className="grid grid-cols-3 gap-4 py-4 border-y border-border/50">
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 font-black text-xl">
-                    {app.rating} <Star className="h-5 w-5 fill-primary text-primary" />
+                    4.5 <Star className="h-5 w-5 fill-primary text-primary" />
                   </div>
-                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{app.reviews} Reviews</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Verified Rating</p>
                 </div>
                 <div className="text-center border-x border-border/50">
-                  <div className="font-black text-xl">{app.size}</div>
+                  <div className="font-black text-xl">-- MB</div>
                   <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Size</p>
                 </div>
                 <div className="text-center">
@@ -130,19 +172,7 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Gallery */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-black mb-6">Experience {app.name}</h2>
-          <div className="overflow-x-auto no-scrollbar flex gap-6 pb-4">
-            {app.screenshots.map((ss, idx) => (
-              <div key={idx} className="relative h-[480px] w-[270px] rounded-[2rem] overflow-hidden shadow-lg flex-shrink-0 border-4 border-card">
-                <Image src={ss} alt={`Screenshot ${idx + 1}`} fill className="object-cover" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Info Tabs / Grid */}
+        {/* Info Grid */}
         <div className="mt-12 grid gap-12 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-8">
             <section className="space-y-4">
@@ -162,7 +192,7 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
                 <div>
                   <h3 className="text-xl font-black">Verified Security Scan</h3>
                   <p className="text-muted-foreground font-medium mt-1">
-                    This file was scanned by our automated security system on {app.lastUpdated}. No threats detected. Signature verified.
+                    This file was scanned by our automated security system. No threats detected. Signature verified.
                   </p>
                 </div>
               </div>
@@ -179,29 +209,15 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-border/30">
                   <span className="text-muted-foreground font-bold text-sm uppercase">Updated</span>
-                  <span className="font-black">{app.lastUpdated}</span>
+                  <span className="font-black">{new Date(app.created_at).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-border/30">
                   <span className="text-muted-foreground font-bold text-sm uppercase">Required</span>
                   <span className="font-black">Android 8.0+</span>
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-muted-foreground font-bold text-sm uppercase">Size</span>
-                  <span className="font-black">{app.size}</span>
-                </div>
               </div>
               <Button variant="secondary" className="w-full rounded-xl font-bold gap-2">
                 <History className="h-4 w-4" /> View History
-              </Button>
-            </div>
-
-            <div className="p-6 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 text-primary-foreground space-y-4">
-              <h3 className="text-xl font-black">Join PLKAPK</h3>
-              <p className="font-medium opacity-90 text-sm">
-                Get notified whenever {app.name} receives an update.
-              </p>
-              <Button variant="secondary" className="w-full rounded-xl font-bold bg-white text-primary hover:bg-white/90">
-                Subscribe Updates
               </Button>
             </div>
           </aside>

@@ -1,21 +1,40 @@
+
+"use client";
+
 import { Navigation } from "@/components/Navigation";
 import { AppCard } from "@/components/AppCard";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Sparkles, PackageOpen } from "lucide-react";
+import { ArrowRight, Zap, Sparkles, PackageOpen, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-
-// Set to [] to test empty state
-const MOCK_APPS = [
-  { id: "1", name: "WhatsApp Messenger", category: "Social", version: "2.24.1", rating: 4.8, iconUrl: PlaceHolderImages.find(i => i.id === "app-icon-1")?.imageUrl! },
-  { id: "2", name: "Genshin Impact", category: "Games", version: "4.5.0", rating: 4.5, iconUrl: PlaceHolderImages.find(i => i.id === "app-icon-2")?.imageUrl! },
-  { id: "3", name: "Notion", category: "Productivity", version: "0.24.1", rating: 4.7, iconUrl: PlaceHolderImages.find(i => i.id === "app-icon-3")?.imageUrl! },
-  { id: "4", name: "Adobe Lightroom", category: "Photography", version: "9.2.0", rating: 4.6, iconUrl: PlaceHolderImages.find(i => i.id === "app-icon-4")?.imageUrl! },
-];
+import { useEffect, useState } from "react";
+import { supabase, AppData } from "@/lib/supabase";
 
 export default function Home() {
+  const [apps, setApps] = useState<AppData[]>([]);
+  const [loading, setLoading] = useState(true);
   const heroImage = PlaceHolderImages.find(i => i.id === "hero-bg");
+
+  useEffect(() => {
+    const fetchApps = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('apps')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        setApps(data || []);
+      } catch (err) {
+        console.error("Error fetching apps:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApps();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,14 +85,18 @@ export default function Home() {
               </div>
               <h2 className="text-3xl font-black tracking-tight">Latest Discoveries</h2>
             </div>
-            {MOCK_APPS.length > 0 && (
+            {apps.length > 0 && (
               <Button variant="ghost" className="text-primary font-bold hover:bg-primary/5 group">
                 See More <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             )}
           </div>
 
-          {MOCK_APPS.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center py-24">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+          ) : apps.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center space-y-4 bg-muted/30 rounded-[3rem] border-2 border-dashed border-border">
               <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center text-muted-foreground/30">
                 <PackageOpen className="h-12 w-12" />
@@ -85,8 +108,16 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {MOCK_APPS.map((app) => (
-                <AppCard key={app.id} {...app} />
+              {apps.map((app) => (
+                <AppCard 
+                  key={app.id} 
+                  id={app.id}
+                  name={app.app_name}
+                  category={app.category || "General"}
+                  version={app.version}
+                  rating={4.5} // Default rating or fetch from another table
+                  iconUrl={app.image_url || PlaceHolderImages[0].imageUrl}
+                />
               ))}
             </div>
           )}

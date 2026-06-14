@@ -1,20 +1,41 @@
+
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, User, Menu, Home, Grid, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase";
 
 export function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
   const [clickCount, setClickCount] = useState(0);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogoClick = () => {
     setClickCount((prev) => prev + 1);
     if (clickCount + 1 >= 5) {
-      alert("Security Check: Enter Admin Code 7227 to proceed.");
+      const code = prompt("Security Check: Enter Admin Code to proceed.");
+      if (code === "7227") {
+        router.push("/auth/login?admin=true");
+      } else {
+        alert("Incorrect Code.");
+      }
       setClickCount(0);
     }
   };
@@ -24,6 +45,11 @@ export function Navigation() {
     { name: "Categories", href: "/categories", icon: Grid },
     { name: "Downloads", href: "/downloads", icon: Download },
   ];
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.refresh();
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
@@ -71,11 +97,24 @@ export function Navigation() {
               <Search className="h-5 w-5" />
             </Button>
             
-            <Link href="/auth/login">
-              <Button variant="outline" size="sm" className="rounded-full px-4 h-10 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold">
-                <User className="mr-2 h-4 w-4" /> Login
-              </Button>
-            </Link>
+            {user ? (
+              <div className="flex items-center gap-2">
+                {user.email === "shanpalia786@gmail.com" && (
+                  <Link href="/admin/dashboard">
+                    <Button variant="ghost" size="sm" className="rounded-full px-4 h-10 font-bold">Admin</Button>
+                  </Link>
+                )}
+                <Button onClick={handleSignOut} variant="outline" size="sm" className="rounded-full px-4 h-10 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold">
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <Link href="/auth/login">
+                <Button variant="outline" size="sm" className="rounded-full px-4 h-10 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold">
+                  <User className="mr-2 h-4 w-4" /> Login
+                </Button>
+              </Link>
+            )}
 
             <Button variant="ghost" size="icon" className="lg:hidden">
               <Menu className="h-6 w-6" />
