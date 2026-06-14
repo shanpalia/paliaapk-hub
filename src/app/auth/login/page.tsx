@@ -1,3 +1,4 @@
+
 'use client';
 
 import {Button} from '@/components/ui/button';
@@ -26,10 +27,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Security Check: If it's the admin path, enforce specific credentials
+      // Security Check: If it's an admin request, enforce specific hardcoded credentials
       if (isAdminRequest) {
         if (email !== 'shanpalia786@gmail.com' || password !== 'hafsa@1#HASAN') {
-          throw new Error('Invalid admin credentials.');
+          throw new Error('Invalid Admin Credentials');
         }
       }
 
@@ -42,13 +43,11 @@ export default function LoginPage() {
 
       toast({title: 'Signed in successfully'});
 
-      if (returnTo) {
-        router.push(returnTo);
-      } else if (
-        isAdminRequest ||
-        data.user?.email === 'shanpalia786@gmail.com'
-      ) {
+      // Strict redirect for admin
+      if (isAdminRequest || data.user?.email === 'shanpalia786@gmail.com') {
         router.push('/admin/dashboard');
+      } else if (returnTo) {
+        router.push(returnTo);
       } else {
         router.push('/');
       }
@@ -81,7 +80,7 @@ export default function LoginPage() {
             {isAdminRequest ? 'Admin Portal' : 'Welcome Back'}
           </h1>
           <p className="text-muted-foreground">
-            Sign in to your PLKAPK Hub account
+            {isAdminRequest ? 'Enter administrative credentials' : 'Sign in to your PLKAPK Hub account'}
           </p>
         </div>
 
@@ -127,7 +126,7 @@ export default function LoginPage() {
             {loading ? (
               <Loader2 className="animate-spin h-5 w-5" />
             ) : (
-              'Sign In'
+              isAdminRequest ? 'Login as Admin' : 'Sign In'
             )}
           </Button>
         </form>

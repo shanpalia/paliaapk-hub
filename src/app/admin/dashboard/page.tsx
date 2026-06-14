@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -56,7 +57,13 @@ export default function AdminDashboard() {
           throw authError;
         }
 
+        // Strict Admin Email Check
         if (!session || session.user.email !== "shanpalia786@gmail.com") {
+          toast({ 
+            variant: "destructive", 
+            title: "Access Denied", 
+            description: "Unauthorized access attempt." 
+          });
           router.push("/auth/login");
           return;
         }
@@ -88,7 +95,7 @@ export default function AdminDashboard() {
     };
 
     checkAuth();
-  }, [router]);
+  }, [router, toast]);
 
   const handleDelete = async (id: string, name: string) => {
     if (!isSupabaseConfigured || isInvalidKey) return;

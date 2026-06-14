@@ -5,15 +5,18 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, User, Menu, Home, LayoutGrid, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
+  const { toast } = useToast();
   const [clickCount, setClickCount] = useState(0);
   const [user, setUser] = useState<any>(null);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -24,20 +27,43 @@ export function Navigation() {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    };
   }, []);
 
   const handleLogoClick = () => {
-    setClickCount((prev) => prev + 1);
-    if (clickCount + 1 >= 5) {
-      const code = prompt("Security Check: Enter Admin Code to proceed.");
-      if (code === "7227") {
-        router.push("/auth/login?admin=true");
-      } else {
-        alert("Incorrect Code.");
+    // Reset timer on every click
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    
+    setClickCount((prev) => {
+      const newCount = prev + 1;
+      
+      if (newCount >= 5) {
+        const pin = prompt("Security Check: Enter Admin PIN");
+        if (pin === "7227") {
+          toast({ 
+            title: "Secret mode activated", 
+            description: "Redirecting to admin portal...",
+          });
+          router.push("/auth/login?admin=true");
+        } else if (pin !== null) {
+          toast({ 
+            variant: "destructive", 
+            title: "Invalid Security PIN" 
+          });
+        }
+        return 0; // Reset count after attempt
       }
-      setClickCount(0);
-    }
+
+      // Start timer to reset count after 5 seconds of inactivity
+      clickTimerRef.current = setTimeout(() => {
+        setClickCount(0);
+      }, 5000);
+
+      return newCount;
+    });
   };
 
   const navLinks = [
