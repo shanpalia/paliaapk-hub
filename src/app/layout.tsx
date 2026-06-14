@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { BottomNavigation } from "@/components/BottomNavigation";
 
 export const metadata: Metadata = {
   title: 'PLKAPK Hub | The Ultimate Android App Marketplace',
@@ -20,8 +21,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased min-h-screen selection:bg-primary/20 selection:text-primary">
+      <body className="font-body antialiased min-h-screen selection:bg-primary/20 selection:text-primary pb-20 lg:pb-0">
         {children}
+        <BottomNavigation />
         <Toaster />
       </body>
     </html>

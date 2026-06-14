@@ -4,18 +4,17 @@
 import { Navigation } from "@/components/Navigation";
 import { AppCard } from "@/components/AppCard";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Sparkles, PackageOpen, Loader2, AlertCircle } from "lucide-react";
+import { ArrowRight, Zap, Sparkles, PackageOpen, Loader2, AlertCircle, TrendingUp, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase, AppData, isSupabaseConfigured } from "@/lib/supabase";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Home() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isInvalidKey, setIsInvalidKey] = useState(false);
   const heroImage = PlaceHolderImages.find(i => i.id === "hero-bg");
 
@@ -25,41 +24,37 @@ export default function Home() {
         setLoading(false);
         return;
       }
-
       try {
-        const { data, error: fetchError } = await supabase
+        const { data, error } = await supabase
           .from('apps')
           .select('*')
           .order('created_at', { ascending: false });
         
-        if (fetchError) {
-          if (fetchError.message === "Invalid API key" || fetchError.code === "PGRST301") {
+        if (error) {
+          if (error.message === "Invalid API key" || error.code === "PGRST301") {
             setIsInvalidKey(true);
-          } else {
-            console.error("Supabase fetch error:", fetchError.message);
-            setError(fetchError.message);
           }
           setApps([]);
         } else {
           setApps(data || []);
         }
-      } catch (err: any) {
-        if (err.message !== "Failed to fetch") {
-          console.error("Unexpected error:", err);
-        }
-        setError("Could not connect to the database. Check your network or configuration.");
+      } catch (err) {
+        console.error("Fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchApps();
   }, []);
+
+  const featuredApps = useMemo(() => apps.slice(0, 3), [apps]);
+  const trendingApps = useMemo(() => [...apps].sort((a, b) => b.downloads - a.downloads).slice(0, 4), [apps]);
+  const recentApps = useMemo(() => apps.slice(0, 8), [apps]);
 
   const showConfigAlert = !isSupabaseConfigured || isInvalidKey;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-12 lg:pb-0">
       <Navigation />
       
       <main className="container mx-auto px-4 py-8 space-y-12">
@@ -71,35 +66,35 @@ export default function Home() {
             </AlertTitle>
             <AlertDescription className="text-sm font-medium">
               {isInvalidKey 
-                ? "The Supabase API key provided is invalid. Please verify your environment variables." 
-                : "Supabase is not configured. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your environment variables."}
+                ? "The Supabase API key provided is invalid." 
+                : "Supabase is not configured properly."}
             </AlertDescription>
           </Alert>
         )}
 
-        <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary/10 via-white to-transparent p-8 md:p-16 border border-primary/5">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary/10 via-white to-transparent p-8 md:p-12 border border-primary/5">
           <div className="relative z-10 grid gap-8 md:grid-cols-2 items-center">
             <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-primary border border-primary/10">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary border border-primary/10">
                 <Sparkles className="h-3 w-3" />
                 Verified Android Apps
               </div>
               <h1 className="font-headline text-4xl font-black leading-tight text-foreground md:text-5xl lg:text-7xl">
-                The Secure <span className="text-primary italic">APK Hub</span> for You
+                The Secure <span className="text-primary italic">APK Hub</span>
               </h1>
               <p className="max-w-md text-lg text-muted-foreground font-medium leading-relaxed">
-                Discover the best Android applications, fully verified and ready for high-speed download.
+                Experience high-speed, verified downloads for your Android device.
               </p>
-              <div className="flex flex-wrap gap-4 pt-4">
-                <Button size="lg" className="rounded-full px-10 h-14 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
-                  Browse Apps
-                </Button>
-                <Button variant="outline" size="lg" className="rounded-full px-10 h-14 text-lg font-bold bg-white/50 backdrop-blur">
-                  Top Charts
-                </Button>
+              <div className="flex flex-wrap gap-4 pt-2">
+                <Link href="/search">
+                  <Button size="lg" className="rounded-full px-10 h-14 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
+                    Discover Now
+                  </Button>
+                </Link>
               </div>
             </div>
-            <div className="hidden md:block relative h-[400px]">
+            <div className="hidden md:block relative h-[350px]">
                <Image
                 src={heroImage?.imageUrl || "https://picsum.photos/seed/tech/800/400"}
                 alt="Modern Tech"
@@ -111,19 +106,79 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Featured Section */}
+        {apps.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Star className="h-5 w-5 fill-primary" />
+                </div>
+                <h2 className="text-2xl font-black tracking-tight">Editor's Choice</h2>
+              </div>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {featuredApps.map((app) => (
+                <AppCard 
+                  key={app.id} 
+                  id={app.id}
+                  name={app.app_name}
+                  category={app.category || "General"}
+                  version={app.version}
+                  rating={4.9}
+                  iconUrl={app.icon_url}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Trending Section */}
+        {trendingApps.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <h2 className="text-2xl font-black tracking-tight">Top Charts</h2>
+              </div>
+              <Link href="/search?sort=downloads">
+                <Button variant="ghost" className="text-primary font-bold hover:bg-primary/5 group">
+                  Top Downloads <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {trendingApps.map((app) => (
+                <AppCard 
+                  key={app.id} 
+                  id={app.id}
+                  name={app.app_name}
+                  category={app.category || "General"}
+                  version={app.version}
+                  rating={4.7}
+                  iconUrl={app.icon_url}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recently Added */}
         <section className="space-y-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <Zap className="h-5 w-5 fill-primary" />
               </div>
-              <h2 className="text-3xl font-black tracking-tight">Latest Discoveries</h2>
+              <h2 className="text-2xl font-black tracking-tight">Fresh Releases</h2>
             </div>
-            {apps.length > 0 && (
+            <Link href="/search">
               <Button variant="ghost" className="text-primary font-bold hover:bg-primary/5 group">
-                See More <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                Browse All <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
-            )}
+            </Link>
           </div>
 
           {loading ? (
@@ -132,21 +187,13 @@ export default function Home() {
             </div>
           ) : apps.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center space-y-4 bg-muted/30 rounded-[3rem] border-2 border-dashed border-border">
-              <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center text-muted-foreground/30">
-                <PackageOpen className="h-12 w-12" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-black text-foreground">No Apps Available Yet</h3>
-                <p className="text-muted-foreground font-medium mt-2">
-                  {showConfigAlert 
-                    ? "Configure Supabase to start adding applications to your store." 
-                    : "Check back soon! Our team is verifying new content for the hub."}
-                </p>
-              </div>
+              <PackageOpen className="h-16 w-16 text-muted-foreground/30" />
+              <h3 className="text-2xl font-black">No Apps Found</h3>
+              <p className="text-muted-foreground max-w-xs">Our team is currently verifying new content. Check back soon!</p>
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {apps.map((app) => (
+              {recentApps.map((app) => (
                 <AppCard 
                   key={app.id} 
                   id={app.id}
@@ -154,38 +201,25 @@ export default function Home() {
                   category={app.category || "General"}
                   version={app.version}
                   rating={4.5}
-                  iconUrl={app.icon_url || "https://picsum.photos/seed/app/128/128"}
+                  iconUrl={app.icon_url}
                 />
               ))}
             </div>
           )}
         </section>
-
-        <section className="grid gap-6 md:grid-cols-3">
-          {[
-            { title: "Safe & Secure", desc: "Every APK is scanned and verified before publishing." },
-            { title: "High Speed", desc: "Global CDN ensures lightning fast downloads every time." },
-            { title: "No Junk", desc: "Curated selection of only high-quality applications." }
-          ].map((feat, idx) => (
-            <div key={idx} className="p-8 rounded-[2rem] bg-secondary/50 border border-primary/5 space-y-3">
-              <h4 className="text-xl font-black text-primary">{feat.title}</h4>
-              <p className="text-muted-foreground font-medium">{feat.desc}</p>
-            </div>
-          ))}
-        </section>
       </main>
 
-      <footer className="mt-20 border-t bg-muted/30 py-16">
+      <footer className="mt-20 border-t bg-muted/30 py-16 hidden lg:block">
         <div className="container mx-auto px-4 text-center space-y-6">
           <div className="flex items-center justify-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg">P</div>
             <span className="font-headline text-2xl font-black tracking-tight">PLKAPK Hub</span>
           </div>
           <p className="text-muted-foreground max-w-sm mx-auto font-medium">
-            The professional choice for verified Android application packages. Secure, fast, and simple.
+            Verified Android applications. Secure, fast, and simple.
           </p>
-          <div className="pt-8 border-t border-border/50 text-sm font-bold text-muted-foreground">
-            &copy; {new Date().getFullYear()} PLKAPK Hub. All rights reserved.
+          <div className="pt-8 border-t border-border/50 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            &copy; {new Date().getFullYear()} PLKAPK Hub.
           </div>
         </div>
       </footer>
