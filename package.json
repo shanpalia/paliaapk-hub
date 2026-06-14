@@ -13,7 +13,7 @@
     "cap:open": "npx cap open android",
     "cap:add": "npx cap add android",
     "build:android": "npm run export && npx cap sync && npx cap open android",
-    "export:project": "zip -r plkapk-hub-export.zip . -x 'node_modules/*' '.next/*' 'out/*' '.git/*'"
+    "export:project": "node scripts/export-project.js"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
@@ -44,6 +44,7 @@
     "@radix-ui/react-toast": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.1.8",
     "@supabase/supabase-js": "^2.48.1",
+    "archiver": "^7.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
