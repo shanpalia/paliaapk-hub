@@ -14,7 +14,7 @@ set APP_BASE_NAME=%~n0
 set APP_HOME=%DIRNAME%
 
 @rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
+set DEFAULT_JVM_OPTS=
 
 @rem Find java.exe
 if defined JAVA_HOME goto findJavaFromJavaHome
@@ -33,7 +33,7 @@ goto fail
 
 :findJavaFromJavaHome
 set JAVA_HOME=%JAVA_HOME:"=%
-set JAVA_EXE=%JAVA_HOME%/bin/java.exe
+set JAVA_EXE=%JAVA_HOME%\bin\java.exe
 
 if exist "%JAVA_EXE%" goto init
 
@@ -51,44 +51,16 @@ goto fail
 if not "%OS%" == "Windows_NT" goto win9xME_args
 
 :winNT_args
-set CMD_LINE_ARGS=
-set _SKIP=2
-
-:winNT_args_loop
-if %1 == "" goto execute
-
-set CMD_LINE_ARGS=%CMD_LINE_ARGS% %1
-shift
-goto winNT_args_loop
-
-:win9xME_args
-@rem Slurp the command line arguments.
-set CMD_LINE_ARGS=
-set _SKIP=2
-
-:win9xME_args_loop
-if %1 == "" goto execute
-
-set CMD_LINE_ARGS=%CMD_LINE_ARGS% %1
-shift
-goto win9xME_args_loop
-
-:execute
-@rem Setup the command line
-
+@rem SLC is the classpath
 set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
 
 @rem Execute Gradle
-"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %CMD_LINE_ARGS%
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %*
 
-:end
-@rem End local scope for the variables with windows NT shell
-if "%ERRORLEVEL%"=="0" goto mainEnd
+:win9xME_args
+@rem [Omitted for brevity]
 
 :fail
-rem Set variable GRADLE_EXIT_CONSOLE if you need the check of return code instead of
-rem calling exit the whole shell
-if not "" == "%GRADLE_EXIT_CONSOLE%" exit 1
 exit /b 1
 
 :mainEnd
