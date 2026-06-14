@@ -111,24 +111,32 @@ export default function AddAppPage() {
 
     setLoading(true);
     setUploadProgress(5);
+    let currentPhase = "Preparing assets";
+    
     try {
       // 1. Upload Icon
+      currentPhase = "Uploading App Icon (Bucket: app-icons)";
       const iconExt = imageFile!.name.split('.').pop();
       const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${iconExt}`;
-      const { data: iconData, error: iconError } = await supabase.storage.from('app-icons').upload(iconPath, imageFile!);
+      const { data: iconData, error: iconError } = await supabase.storage
+        .from('app-icons')
+        .upload(iconPath, imageFile!);
       
-      if (iconError) throw iconError;
+      if (iconError) throw { ...iconError, phase: currentPhase };
       
       const { data: { publicUrl: iconUrl } } = supabase.storage.from('app-icons').getPublicUrl(iconPath);
       setUploadProgress(30);
 
       // 2. Upload APK
+      currentPhase = "Uploading APK Package (Bucket: apk-files)";
       const apkOriginalName = apkFile!.name;
       const apkExt = apkOriginalName.split('.').pop();
       const apkPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${apkExt}`;
-      const { data: apkData, error: apkError } = await supabase.storage.from('apk-files').upload(apkPath, apkFile!);
+      const { data: apkData, error: apkError } = await supabase.storage
+        .from('apk-files')
+        .upload(apkPath, apkFile!);
       
-      if (apkError) throw apkError;
+      if (apkError) throw { ...apkError, phase: currentPhase };
 
       const { data: { publicUrl: apkUrl } } = supabase.storage.from('apk-files').getPublicUrl(apkPath);
       setUploadProgress(60);
@@ -136,11 +144,12 @@ export default function AddAppPage() {
       // 3. Optional Screenshot
       let screenshotUrl = "";
       if (screenshotFile) {
+        currentPhase = "Uploading Screenshot (Bucket: screenshots)";
         const ssExt = screenshotFile.name.split('.').pop();
         const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ssExt}`;
         const { error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
         
-        if (ssError) throw ssError;
+        if (ssError) throw { ...ssError, phase: currentPhase };
 
         const { data: { publicUrl: ssUrl } } = supabase.storage.from('screenshots').getPublicUrl(ssPath);
         screenshotUrl = ssUrl;
@@ -148,6 +157,7 @@ export default function AddAppPage() {
       setUploadProgress(85);
 
       // 4. Insert into Database
+      currentPhase = "Saving Application Metadata (Table: apps)";
       const { error: dbError } = await supabase.from('apps').insert({
         app_name: formData.name,
         category: formData.category,
@@ -161,17 +171,25 @@ export default function AddAppPage() {
         created_at: new Date().toISOString()
       });
 
-      if (dbError) throw dbError;
+      if (dbError) throw { ...dbError, phase: currentPhase };
 
       setUploadProgress(100);
       toast({ title: "Success!", description: "App published successfully." });
       router.push("/admin/dashboard");
     } catch (err: any) {
-      console.error("Critical Publishing Error:", err);
+      console.group("Publishing Diagnostics Failed");
+      console.error("Phase:", err.phase || currentPhase);
+      console.error("Error Message:", err.message || "No error message provided");
+      console.error("Error Code:", err.code || "No code");
+      if (err.details) console.error("Details:", err.details);
+      if (err.hint) console.error("Hint:", err.hint);
+      console.error("Raw Error Object:", err);
+      console.groupEnd();
+
       toast({ 
         variant: "destructive", 
-        title: "Publishing Failed", 
-        description: err.message,
+        title: `Publishing Failed: ${err.phase || 'Error'}`, 
+        description: err.message || "An unexpected error occurred. Please check the console for logs.",
       });
       setUploadProgress(0);
     } finally {
@@ -355,7 +373,7 @@ export default function AddAppPage() {
           {loading && (
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-black uppercase tracking-widest text-primary">
-                <span>Publishing Assets...</span>
+                <span>{currentPhase}...</span>
                 <span>{uploadProgress}%</span>
               </div>
               <Progress value={uploadProgress} className="h-2" />
