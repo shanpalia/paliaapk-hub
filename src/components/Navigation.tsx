@@ -24,7 +24,10 @@ export function Navigation() {
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Admin trigger state
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -37,29 +40,40 @@ export function Navigation() {
 
     return () => {
       subscription.unsubscribe();
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     };
   }, []);
 
-  const handleLongPressStart = () => {
-    timerRef.current = setTimeout(() => {
-      const pin = window.prompt("Enter Security PIN");
+  const handleAdminTrigger = (e: React.MouseEvent) => {
+    // Reset timer on every click
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      setClickCount(0);
+      console.log("Admin click counter reset");
+    }, 5000);
+
+    const nextCount = clickCount + 1;
+    setClickCount(nextCount);
+    console.log(`Admin Trigger: Click ${nextCount}/5`);
+
+    if (nextCount < 5) {
+      toast({ title: `Click ${nextCount}/5` });
+    } else {
+      setClickCount(0);
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      
+      toast({ title: "Admin Mode Activated" });
+      const pin = window.prompt("Admin Access\n\nEnter Security PIN");
+      
       if (pin === "7227") {
-        router.push("/auth/login?admin=true");
+        router.push("/admin/dashboard");
       } else if (pin !== null) {
         toast({ 
           variant: "destructive", 
-          title: "Invalid Security PIN",
+          title: "Invalid PIN",
           description: "Access denied."
         });
       }
-    }, 3000);
-  };
-
-  const handleLongPressEnd = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
     }
   };
 
@@ -117,13 +131,7 @@ export function Navigation() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div 
-              onMouseDown={handleLongPressStart}
-              onMouseUp={handleLongPressEnd}
-              onMouseLeave={handleLongPressEnd}
-              onTouchStart={handleLongPressStart}
-              onTouchEnd={handleLongPressEnd}
-            >
+            <div onClick={handleAdminTrigger}>
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
