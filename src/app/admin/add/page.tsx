@@ -96,58 +96,76 @@ export default function AddAppPage() {
     if (!isFormValid) return;
 
     setLoading(true);
-    setUploadProgress(10);
+    setUploadProgress(5);
     try {
       // 1. Upload Icon
       const iconExt = imageFile!.name.split('.').pop();
       const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${iconExt}`;
-      const { error: iconError } = await supabase.storage.from('app-icons').upload(iconPath, imageFile!);
+      const { data: iconData, error: iconError } = await supabase.storage.from('app-icons').upload(iconPath, imageFile!);
       
       if (iconError) {
+        console.error("RAW_ICON_UPLOAD_ERROR:", iconError);
         throw { 
           source: 'Storage Bucket: app-icons',
-          ...iconError 
+          fileName: imageFile!.name,
+          message: iconError.message,
+          code: (iconError as any).code || (iconError as any).statusCode || 'UNKNOWN_CODE',
+          details: (iconError as any).details || 'No additional details provided by Supabase.',
+          hint: (iconError as any).hint || 'No hint available.',
+          response: JSON.stringify(iconData || 'No response data')
         };
       }
       
       const { data: { publicUrl: iconUrl } } = supabase.storage.from('app-icons').getPublicUrl(iconPath);
-      setUploadProgress(40);
+      setUploadProgress(30);
 
       // 2. Upload APK
       const apkExt = apkFile!.name.split('.').pop();
       const apkPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${apkExt}`;
-      const { error: apkError } = await supabase.storage.from('apk-files').upload(apkPath, apkFile!);
+      const { data: apkData, error: apkError } = await supabase.storage.from('apk-files').upload(apkPath, apkFile!);
       
       if (apkError) {
+        console.error("RAW_APK_UPLOAD_ERROR:", apkError);
         throw { 
           source: 'Storage Bucket: apk-files',
-          ...apkError 
+          fileName: apkFile!.name,
+          message: apkError.message,
+          code: (apkError as any).code || (apkError as any).statusCode || 'UNKNOWN_CODE',
+          details: (apkError as any).details || 'No additional details provided by Supabase.',
+          hint: (apkError as any).hint || 'No hint available.',
+          response: JSON.stringify(apkData || 'No response data')
         };
       }
 
       const { data: { publicUrl: apkUrl } } = supabase.storage.from('apk-files').getPublicUrl(apkPath);
-      setUploadProgress(70);
+      setUploadProgress(60);
 
       // 3. Optional Screenshot
       let screenshotUrl = "";
       if (screenshotFile) {
         const ssExt = screenshotFile.name.split('.').pop();
         const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ssExt}`;
-        const { error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
+        const { data: ssData, error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
         
         if (ssError) {
+          console.error("RAW_SCREENSHOT_UPLOAD_ERROR:", ssError);
           throw { 
             source: 'Storage Bucket: screenshots',
-            ...ssError 
+            fileName: screenshotFile.name,
+            message: ssError.message,
+            code: (ssError as any).code || (ssError as any).statusCode || 'UNKNOWN_CODE',
+            details: (ssError as any).details || 'No additional details provided by Supabase.',
+            hint: (ssError as any).hint || 'No hint available.',
+            response: JSON.stringify(ssData || 'No response data')
           };
         }
 
         const { data: { publicUrl: ssUrl } } = supabase.storage.from('screenshots').getPublicUrl(ssPath);
         screenshotUrl = ssUrl;
       }
-      setUploadProgress(90);
+      setUploadProgress(85);
 
-      // 4. Insert into Database with exact columns
+      // 4. Insert into Database
       const { error: dbError } = await supabase.from('apps').insert({
         app_name: formData.name,
         category: formData.category,
@@ -161,9 +179,14 @@ export default function AddAppPage() {
       });
 
       if (dbError) {
+        console.error("RAW_DATABASE_INSERT_ERROR:", dbError);
         throw { 
           source: 'Database Table: apps',
-          ...dbError 
+          message: dbError.message,
+          code: dbError.code,
+          details: dbError.details || 'No specific database details.',
+          hint: dbError.hint || 'Check if columns and RLS policies match.',
+          response: 'Database insert failed'
         };
       }
 
@@ -171,25 +194,26 @@ export default function AddAppPage() {
       toast({ title: "Success!", description: "App published successfully." });
       router.push("/admin/dashboard");
     } catch (err: any) {
-      console.error("Upload process error:", err);
+      console.error("Critical Publishing Error:", err);
       
-      // Detailed error breakdown
-      const errorDetails = `
-        Source: ${err.source || 'Unknown'}
-        Message: ${err.message || 'No message provided'}
-        Code: ${err.code || 'No code'}
-        Details: ${err.details || 'No additional details'}
-        Hint: ${err.hint || 'No hint available'}
-      `.trim();
+      const errorDisplay = (
+        <div className="mt-4 space-y-2 text-[11px] font-mono whitespace-pre-wrap max-h-[300px] overflow-auto border-t pt-4 border-destructive/20">
+          <p className="font-black text-xs uppercase text-red-500">Error Report</p>
+          <p><span className="font-black">Source:</span> {err.source || 'Generic Runtime'}</p>
+          {err.fileName && <p><span className="font-black">File:</span> {err.fileName}</p>}
+          <p><span className="font-black">Code:</span> {err.code || 'N/A'}</p>
+          <p><span className="font-black">Message:</span> {err.message || 'An unexpected error occurred.'}</p>
+          <p><span className="font-black">Details:</span> {err.details || 'N/A'}</p>
+          <p><span className="font-black">Hint:</span> {err.hint || 'N/A'}</p>
+          <p className="mt-2 text-[9px] opacity-70"><span className="font-black">Raw Response:</span> {err.response || 'No response object'}</p>
+        </div>
+      );
 
       toast({ 
         variant: "destructive", 
         title: "Publishing Failed", 
-        description: (
-          <div className="mt-2 space-y-1 text-[10px] font-mono whitespace-pre-wrap max-h-[200px] overflow-auto">
-            {errorDetails}
-          </div>
-        )
+        description: errorDisplay,
+        duration: 10000,
       });
       setUploadProgress(0);
     } finally {
