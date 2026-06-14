@@ -24,6 +24,7 @@ export default function EditAppPage() {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState("Loading application data");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -149,47 +150,60 @@ export default function EditAppPage() {
 
     setSaving(true);
     setUploadProgress(5);
+    let phase = "Processing updates";
+    setCurrentPhase(phase);
+
     try {
       let icon_url = formData.icon_url;
       let apkUrl = formData.apk_url;
       let apkFileName = formData.apk_file_name;
       let screenshotUrl = formData.screenshot_url;
 
-      // Handle Icon Update
+      // 1. Handle Icon Update
       if (imageFile) {
+        phase = "Updating icon in storage";
+        setCurrentPhase(phase);
         const ext = imageFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
         const { error } = await supabase.storage.from('app-icons').upload(path, imageFile);
-        if (error) throw error;
+        if (error) throw { ...error, phase };
         const { data: { publicUrl } } = supabase.storage.from('app-icons').getPublicUrl(path);
         icon_url = publicUrl;
       }
       setUploadProgress(30);
 
-      // Handle APK Update
+      // 2. Handle APK Update
       if (apkFile) {
+        phase = "Uploading new APK package";
+        setCurrentPhase(phase);
         apkFileName = apkFile.name;
         const ext = apkFileName.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
         const { error } = await supabase.storage.from('apk-files').upload(path, apkFile);
-        if (error) throw error;
+        if (error) throw { ...error, phase };
         const { data: { publicUrl } } = supabase.storage.from('apk-files').getPublicUrl(path);
         apkUrl = publicUrl;
       }
       setUploadProgress(60);
 
-      // Handle Screenshot Update
+      // 3. Handle Screenshot Update
       if (screenshotFile) {
+        phase = "Syncing screenshots";
+        setCurrentPhase(phase);
         const ext = screenshotFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
         const { error } = await supabase.storage.from('screenshots').upload(path, screenshotFile);
-        if (error) throw error;
+        if (error) throw { ...error, phase };
         const { data: { publicUrl } } = supabase.storage.from('screenshots').getPublicUrl(path);
         screenshotUrl = publicUrl;
       }
       setUploadProgress(85);
 
-      const { error: dbError } = await supabase.from('apps').update({
+      // 4. Database Update
+      phase = "Saving metadata updates (Table: apps)";
+      setCurrentPhase(phase);
+
+      const payload = {
         app_name: formData.name,
         category: formData.category,
         description: formData.description,
@@ -198,16 +212,37 @@ export default function EditAppPage() {
         apk_url: apkUrl,
         apk_file_name: apkFileName,
         screenshot_url: screenshotUrl
-      }).eq('id', id);
+      };
 
-      if (dbError) throw dbError;
+      console.log("Update Payload (Table: apps):", payload);
+
+      const { error: dbError } = await supabase.from('apps').update(payload).eq('id', id);
+
+      if (dbError) {
+        console.error("Supabase Update Failed!", {
+          phase,
+          message: dbError.message,
+          code: dbError.code,
+          details: dbError.details,
+          hint: dbError.hint,
+          payload
+        });
+        throw { ...dbError, phase };
+      }
 
       setUploadProgress(100);
       toast({ title: "App Updated Successfully" });
       router.push("/admin/dashboard");
     } catch (err: any) {
-      console.error("Update Error:", err);
-      toast({ variant: "destructive", title: "Update Failed", description: err.message });
+      console.group("Update Error Diagnostics");
+      console.error("Phase:", err.phase || phase);
+      console.error("Message:", err.message || "Update process failed");
+      console.error("Code:", err.code || "N/A");
+      if (err.details) console.error("Details:", err.details);
+      if (err.hint) console.error("Hint:", err.hint);
+      console.groupEnd();
+      
+      toast({ variant: "destructive", title: `Update Failed: ${err.phase || 'Error'}`, description: err.message });
       setUploadProgress(0);
     } finally {
       setSaving(false);
@@ -374,7 +409,7 @@ export default function EditAppPage() {
           {saving && (
             <div className="space-y-3">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-                <span>Saving to Cloud...</span>
+                <span>{currentPhase}...</span>
                 <span>{uploadProgress}%</span>
               </div>
               <Progress value={uploadProgress} className="h-2.5 bg-muted rounded-full" />

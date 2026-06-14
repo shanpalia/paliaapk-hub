@@ -125,7 +125,10 @@ export default function AddAppPage() {
         .from('app-icons')
         .upload(iconPath, imageFile!);
       
-      if (iconError) throw { ...iconError, phase };
+      if (iconError) {
+        console.error("Phase Error: Icon Upload", iconError);
+        throw { ...iconError, phase };
+      }
       
       const { data: { publicUrl: iconUrl } } = supabase.storage.from('app-icons').getPublicUrl(iconPath);
       setUploadProgress(30);
@@ -140,7 +143,10 @@ export default function AddAppPage() {
         .from('apk-files')
         .upload(apkPath, apkFile!);
       
-      if (apkError) throw { ...apkError, phase };
+      if (apkError) {
+        console.error("Phase Error: APK Upload", apkError);
+        throw { ...apkError, phase };
+      }
 
       const { data: { publicUrl: apkUrl } } = supabase.storage.from('apk-files').getPublicUrl(apkPath);
       setUploadProgress(60);
@@ -154,7 +160,10 @@ export default function AddAppPage() {
         const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ssExt}`;
         const { error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
         
-        if (ssError) throw { ...ssError, phase };
+        if (ssError) {
+          console.error("Phase Error: Screenshot Upload", ssError);
+          throw { ...ssError, phase };
+        }
 
         const { data: { publicUrl: ssUrl } } = supabase.storage.from('screenshots').getPublicUrl(ssPath);
         screenshotUrl = ssUrl;
@@ -164,7 +173,8 @@ export default function AddAppPage() {
       // 4. Insert into Database
       phase = "Saving Application Metadata (Table: apps)";
       setCurrentPhase(phase);
-      const { error: dbError } = await supabase.from('apps').insert({
+      
+      const payload = {
         app_name: formData.name,
         category: formData.category,
         description: formData.description,
@@ -175,27 +185,41 @@ export default function AddAppPage() {
         screenshot_url: screenshotUrl,
         downloads: 0,
         created_at: new Date().toISOString()
-      });
+      };
 
-      if (dbError) throw { ...dbError, phase };
+      console.log("Insert Payload (Table: apps):", payload);
+
+      const { error: dbError } = await supabase.from('apps').insert(payload);
+
+      if (dbError) {
+        console.error("Supabase Insert Failed!", {
+          phase,
+          message: dbError.message,
+          code: dbError.code,
+          details: dbError.details,
+          hint: dbError.hint,
+          payload
+        });
+        throw { ...dbError, phase };
+      }
 
       setUploadProgress(100);
       toast({ title: "Success!", description: "App published successfully." });
       router.push("/admin/dashboard");
     } catch (err: any) {
-      console.group("Publishing Diagnostics Failed");
-      console.error("Phase:", err.phase || phase);
-      console.error("Error Message:", err.message || "No error message provided");
-      console.error("Error Code:", err.code || "No code");
+      console.group("Critical Publishing Error Diagnostics");
+      console.error("Active Phase:", err.phase || phase);
+      console.error("Message:", err.message || "Unknown error occurred");
+      console.error("Code:", err.code || "N/A");
       if (err.details) console.error("Details:", err.details);
       if (err.hint) console.error("Hint:", err.hint);
-      console.error("Raw Error Object:", err);
+      console.error("Full Error Context:", err);
       console.groupEnd();
 
       toast({ 
         variant: "destructive", 
         title: `Publishing Failed: ${err.phase || 'Error'}`, 
-        description: err.message || "An unexpected error occurred. Please check the console for logs.",
+        description: err.message || "An unexpected error occurred. Please check the browser console for technical logs.",
       });
       setUploadProgress(0);
     } finally {
@@ -348,6 +372,8 @@ export default function AddAppPage() {
                 <SelectItem value="Productivity">Productivity</SelectItem>
                 <SelectItem value="Photography">Photography</SelectItem>
                 <SelectItem value="Tools">Tools</SelectItem>
+                <SelectItem value="Education">Education</SelectItem>
+                <SelectItem value="Entertainment">Entertainment</SelectItem>
                 <SelectItem value="General">General</SelectItem>
               </SelectContent>
             </Select>
