@@ -46,13 +46,14 @@ export default function AddAppPage() {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || session.user.email !== "shanpalia786@gmail.com") {
-        router.push("/auth/login");
+        toast({ variant: "destructive", title: "Access Denied", description: "Admin authentication required." });
+        router.push("/auth/login?admin=true");
       } else {
         setCheckingAuth(false);
       }
     };
     checkAuth();
-  }, [router]);
+  }, [router, toast]);
 
   const isFormValid = formData.name && formData.version && formData.description && imageFile && apkFile;
 

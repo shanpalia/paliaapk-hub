@@ -38,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Link from "next/link";
+import Link from "link";
 import { useEffect, useState, useMemo } from "react";
 import { supabase, AppData, isSupabaseConfigured } from "@/lib/supabase";
 import Image from "next/image";
