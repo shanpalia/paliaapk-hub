@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -11,7 +10,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2, ArrowLeft, Save } from "lucide-react";
+import { Upload, Loader2, ArrowLeft, Save, Image as ImageIcon, FileArchive } from "lucide-react";
 import Link from "next/link";
 
 export default function EditAppPage() {
@@ -25,10 +24,12 @@ export default function EditAppPage() {
     description: "",
     category: "General",
     image_url: "",
-    apk_url: ""
+    apk_url: "",
+    screenshot_url: ""
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [apkFile, setApkFile] = useState<File | null>(null);
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -49,7 +50,8 @@ export default function EditAppPage() {
             description: data.description,
             category: data.category || "General",
             image_url: data.image_url,
-            apk_url: data.apk_url
+            apk_url: data.apk_url,
+            screenshot_url: data.screenshot_url || ""
           });
         }
       } catch (err: any) {
@@ -73,32 +75,36 @@ export default function EditAppPage() {
     try {
       let imageUrl = formData.image_url;
       let apkUrl = formData.apk_url;
+      let screenshotUrl = formData.screenshot_url;
 
-      // 1. Optional Image Re-upload
+      // 1. Icon Update
       if (imageFile) {
-        const imageExt = imageFile.name.split('.').pop();
-        const imagePath = `icons/${Date.now()}.${imageExt}`;
-        const { error: imageError } = await supabase.storage
-          .from('apps')
-          .upload(imagePath, imageFile);
-        if (imageError) throw imageError;
-        const { data: { publicUrl } } = supabase.storage.from('apps').getPublicUrl(imagePath);
+        const ext = imageFile.name.split('.').pop();
+        const path = `${Date.now()}.${ext}`;
+        await supabase.storage.from('app-icons').upload(path, imageFile);
+        const { data: { publicUrl } } = supabase.storage.from('app-icons').getPublicUrl(path);
         imageUrl = publicUrl;
       }
 
-      // 2. Optional APK Re-upload
+      // 2. APK Update
       if (apkFile) {
-        const apkExt = apkFile.name.split('.').pop();
-        const apkPath = `apks/${Date.now()}.${apkExt}`;
-        const { error: apkError } = await supabase.storage
-          .from('apps')
-          .upload(apkPath, apkFile);
-        if (apkError) throw apkError;
-        const { data: { publicUrl } } = supabase.storage.from('apps').getPublicUrl(apkPath);
+        const ext = apkFile.name.split('.').pop();
+        const path = `${Date.now()}.${ext}`;
+        await supabase.storage.from('apk-files').upload(path, apkFile);
+        const { data: { publicUrl } } = supabase.storage.from('apk-files').getPublicUrl(path);
         apkUrl = publicUrl;
       }
 
-      // 3. Update Database
+      // 3. Screenshot Update
+      if (screenshotFile) {
+        const ext = screenshotFile.name.split('.').pop();
+        const path = `${Date.now()}.${ext}`;
+        await supabase.storage.from('screenshots').upload(path, screenshotFile);
+        const { data: { publicUrl } } = supabase.storage.from('screenshots').getPublicUrl(path);
+        screenshotUrl = publicUrl;
+      }
+
+      // 4. Update DB
       const { error: dbError } = await supabase.from('apps').update({
         app_name: formData.name,
         version: formData.version,
@@ -106,6 +112,7 @@ export default function EditAppPage() {
         category: formData.category,
         image_url: imageUrl,
         apk_url: apkUrl,
+        screenshot_url: screenshotUrl
       }).eq('id', id);
 
       if (dbError) throw dbError;
@@ -120,17 +127,13 @@ export default function EditAppPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
 
   return (
     <div className="min-h-screen bg-muted/10">
       <Navigation />
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
         <Link href="/admin/dashboard" className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-primary mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
         </Link>
@@ -138,95 +141,70 @@ export default function EditAppPage() {
         <div className="bg-white rounded-3xl p-8 shadow-xl border border-border/50 space-y-8">
           <h1 className="text-3xl font-black">Edit Application</h1>
 
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label>Update Icon</Label>
+              <div className="border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative h-32">
+                <Input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                <ImageIcon className="h-6 w-6 text-muted-foreground mb-2" />
+                <span className="text-[10px] font-bold text-muted-foreground text-center line-clamp-1">{imageFile ? imageFile.name : "Change Icon"}</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Update APK</Label>
+              <div className="border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative h-32">
+                <Input type="file" accept=".apk" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setApkFile(e.target.files?.[0] || null)} />
+                <FileArchive className="h-6 w-6 text-muted-foreground mb-2" />
+                <span className="text-[10px] font-bold text-muted-foreground text-center line-clamp-1">{apkFile ? apkFile.name : "New Version"}</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Update Screen</Label>
+              <div className="border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative h-32">
+                <Input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)} />
+                <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                <span className="text-[10px] font-bold text-muted-foreground text-center line-clamp-1">{screenshotFile ? screenshotFile.name : "New Screen"}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>Update Icon (Optional)</Label>
-                <div className="border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative h-32">
-                  <Input 
-                    type="file" 
-                    accept="image/*" 
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                  />
-                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                  <span className="text-xs font-medium text-muted-foreground text-center">
-                    {imageFile ? imageFile.name : "Select new image to replace current"}
-                  </span>
-                </div>
+                <Label>App Name</Label>
+                <Input className="rounded-xl h-12" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
               <div className="space-y-2">
-                <Label>Update APK (Optional)</Label>
-                <div className="border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors relative h-32">
-                  <Input 
-                    type="file" 
-                    accept=".apk" 
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={(e) => setApkFile(e.target.files?.[0] || null)}
-                  />
-                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                  <span className="text-xs font-medium text-muted-foreground text-center">
-                    {apkFile ? apkFile.name : "Select new APK to update version"}
-                  </span>
-                </div>
+                <Label>Version</Label>
+                <Input className="rounded-xl h-12" value={formData.version} onChange={(e) => setFormData({...formData, version: e.target.value})} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">App Name</Label>
-              <Input 
-                id="name" 
-                className="rounded-xl h-12"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="version">Version</Label>
-                <Input 
-                  id="version" 
-                  className="rounded-xl h-12"
-                  value={formData.version}
-                  onChange={(e) => setFormData({...formData, version: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={formData.category} onValueChange={(v) => setFormData({...formData, category: v})}>
-                  <SelectTrigger className="rounded-xl h-12">
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Social">Social</SelectItem>
-                    <SelectItem value="Games">Games</SelectItem>
-                    <SelectItem value="Productivity">Productivity</SelectItem>
-                    <SelectItem value="Photography">Photography</SelectItem>
-                    <SelectItem value="Tools">Tools</SelectItem>
-                    <SelectItem value="General">General</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Label>Category</Label>
+              <Select value={formData.category} onValueChange={(v) => setFormData({...formData, category: v})}>
+                <SelectTrigger className="rounded-xl h-12">
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Social">Social</SelectItem>
+                  <SelectItem value="Games">Games</SelectItem>
+                  <SelectItem value="Productivity">Productivity</SelectItem>
+                  <SelectItem value="Photography">Photography</SelectItem>
+                  <SelectItem value="Tools">Tools</SelectItem>
+                  <SelectItem value="General">General</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="desc">Description</Label>
-              <Textarea 
-                id="desc" 
-                className="rounded-xl min-h-[120px]"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-              />
+              <Label>Description</Label>
+              <Textarea className="rounded-xl min-h-[120px]" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
             </div>
 
-            <Button 
-              onClick={handleUpdate} 
-              disabled={saving}
-              className="w-full h-14 rounded-2xl text-lg font-black shadow-xl shadow-primary/20"
-            >
+            <Button onClick={handleUpdate} disabled={saving} className="w-full h-14 rounded-2xl text-lg font-black">
               {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />}
-              {saving ? "Saving Changes..." : "Save Changes"}
+              Save Changes
             </Button>
           </div>
         </div>
