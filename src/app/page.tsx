@@ -1,37 +1,48 @@
-
 "use client";
 
 import { Navigation } from "@/components/Navigation";
 import { AppCard } from "@/components/AppCard";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Sparkles, PackageOpen, Loader2 } from "lucide-react";
+import { ArrowRight, Zap, Sparkles, PackageOpen, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useEffect, useState } from "react";
-import { supabase, AppData } from "@/lib/supabase";
+import { supabase, AppData, isSupabaseConfigured } from "@/lib/supabase";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Home() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const heroImage = PlaceHolderImages.find(i => i.id === "hero-bg");
 
   useEffect(() => {
     const fetchApps = async () => {
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { data, error } = await supabase
+        const { data, error: fetchError } = await supabase
           .from('apps')
           .select('*')
           .order('created_at', { ascending: false });
         
-        if (error) {
-          console.error("Supabase error fetching apps:", error.message, error.details);
+        if (fetchError) {
+          console.error("Supabase fetch error:", fetchError.message);
+          setError(fetchError.message);
           setApps([]);
         } else {
           setApps(data || []);
         }
       } catch (err: any) {
-        console.error("Unexpected fetch error:", err.message || err);
+        // Suppress "Failed to fetch" noise if likely due to network/config
+        if (err.message !== "Failed to fetch") {
+          console.error("Unexpected error:", err);
+        }
+        setError("Could not connect to the database. Please check your Supabase configuration.");
       } finally {
         setLoading(false);
       }
@@ -45,6 +56,16 @@ export default function Home() {
       <Navigation />
       
       <main className="container mx-auto px-4 py-8 space-y-12">
+        {!isSupabaseConfigured && (
+          <Alert variant="destructive" className="rounded-2xl border-primary/20 bg-primary/5 text-primary">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="font-black uppercase tracking-widest text-xs">Configuration Required</AlertTitle>
+            <AlertDescription className="text-sm font-medium">
+              Supabase is not configured. Please add <strong>NEXT_PUBLIC_SUPABASE_URL</strong> and <strong>NEXT_PUBLIC_SUPABASE_ANON_KEY</strong> to your environment variables to enable the marketplace.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Hero Section */}
         <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary/10 via-white to-transparent p-8 md:p-16 border border-primary/5">
           <div className="relative z-10 grid gap-8 md:grid-cols-2 items-center">
@@ -107,7 +128,11 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-2xl font-black text-foreground">No Apps Available Yet</h3>
-                <p className="text-muted-foreground font-medium mt-2">Check back soon! Our team is verifying new content for the hub.</p>
+                <p className="text-muted-foreground font-medium mt-2">
+                  {isSupabaseConfigured 
+                    ? "Check back soon! Our team is verifying new content for the hub." 
+                    : "Configure Supabase to start adding applications to your store."}
+                </p>
               </div>
             </div>
           ) : (

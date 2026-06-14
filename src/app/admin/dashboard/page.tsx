@@ -13,7 +13,8 @@ import {
   BarChart3,
   Search,
   LayoutGrid,
-  Loader2
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { 
   Table, 
@@ -26,14 +27,16 @@ import {
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase, AppData } from "@/lib/supabase";
+import { supabase, AppData, isSupabaseConfigured } from "@/lib/supabase";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AdminDashboard() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -44,7 +47,11 @@ export default function AdminDashboard() {
         router.push("/auth/login");
         return;
       }
-      fetchApps();
+      if (isSupabaseConfigured) {
+        fetchApps();
+      } else {
+        setLoading(false);
+      }
     };
 
     const fetchApps = async () => {
@@ -56,8 +63,9 @@ export default function AdminDashboard() {
         
         if (error) throw error;
         setApps(data || []);
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        console.error("Dashboard fetch error:", err.message);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -67,6 +75,7 @@ export default function AdminDashboard() {
   }, [router]);
 
   const handleDelete = async (id: string, name: string) => {
+    if (!isSupabaseConfigured) return;
     if (!confirm(`Are you sure you want to delete ${name}?`)) return;
 
     try {
@@ -86,7 +95,7 @@ export default function AdminDashboard() {
     { label: "Total Apps", value: apps.length.toString(), icon: Package, color: "text-blue-500" },
     { label: "Total Downloads", value: totalDownloads.toLocaleString(), icon: TrendingUp, color: "text-primary" },
     { label: "Active Categories", value: Array.from(new Set(apps.map(a => a.category))).length.toString(), icon: LayoutGrid, color: "text-green-500" },
-    { label: "System Status", value: "Online", icon: BarChart3, color: "text-purple-500" },
+    { label: "System Status", value: isSupabaseConfigured ? "Online" : "Offline", icon: BarChart3, color: isSupabaseConfigured ? "text-purple-500" : "text-destructive" },
   ];
 
   return (
@@ -94,6 +103,16 @@ export default function AdminDashboard() {
       <Navigation />
       
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {!isSupabaseConfigured && (
+          <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="font-black uppercase tracking-widest text-xs">Service Offline</AlertTitle>
+            <AlertDescription className="text-sm font-medium">
+              Database connection is not established. Please configure Supabase environment variables.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black tracking-tight">Admin Console</h1>
@@ -101,7 +120,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex gap-2">
             <Link href="/admin/add">
-              <Button className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">
+              <Button disabled={!isSupabaseConfigured} className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">
                 <Plus className="mr-2 h-4 w-4" /> Upload New App
               </Button>
             </Link>
