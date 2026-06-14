@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, User, Menu, Home, Grid, Download } from "lucide-react";
+import { Search, User, Menu, Home, LayoutGrid, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
@@ -42,7 +41,7 @@ export function Navigation() {
 
   const navLinks = [
     { name: "Home", href: "/", icon: Home },
-    { name: "Categories", href: "/categories", icon: Grid },
+    { name: "Categories", href: "/categories", icon: LayoutGrid },
     { name: "Downloads", href: "/downloads", icon: Download },
   ];
 

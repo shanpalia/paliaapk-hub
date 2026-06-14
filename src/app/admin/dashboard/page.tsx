@@ -1,21 +1,18 @@
-
 "use client";
 
 import { Navigation } from "@/components/Navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Plus, 
-  Settings, 
   Trash2, 
   Edit, 
   TrendingUp, 
-  Users, 
   Package, 
   BarChart3,
   Search,
-  Grid,
+  LayoutGrid,
   Loader2
 } from "lucide-react";
 import { 
@@ -88,7 +85,7 @@ export default function AdminDashboard() {
   const stats = [
     { label: "Total Apps", value: apps.length.toString(), icon: Package, color: "text-blue-500" },
     { label: "Total Downloads", value: totalDownloads.toLocaleString(), icon: TrendingUp, color: "text-primary" },
-    { label: "Active Categories", value: Array.from(new Set(apps.map(a => a.category))).length.toString(), icon: Grid, color: "text-green-500" },
+    { label: "Active Categories", value: Array.from(new Set(apps.map(a => a.category))).length.toString(), icon: LayoutGrid, color: "text-green-500" },
     { label: "System Status", value: "Online", icon: BarChart3, color: "text-purple-500" },
   ];
 
@@ -111,7 +108,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, idx) => (
             <Card key={idx} className="border-none shadow-sm rounded-2xl overflow-hidden bg-card">
@@ -130,7 +126,6 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Apps Management */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">Manage Inventory</h2>
@@ -162,8 +157,13 @@ export default function AdminDashboard() {
                     <TableRow key={app.id} className="border-border hover:bg-muted/10 transition-colors">
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                           <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                              <Image src={app.image_url || "/placeholder.png"} alt={app.app_name} width={40} height={40} className="object-cover" />
+                           <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
+                              <Image 
+                                src={app.image_url || "https://picsum.photos/seed/app/40/40"} 
+                                alt={app.app_name} 
+                                fill 
+                                className="object-cover" 
+                              />
                            </div>
                            <span>{app.app_name}</span>
                         </div>
