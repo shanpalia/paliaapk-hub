@@ -131,9 +131,9 @@ export default function EditAppPage() {
         category: formData.category
       });
       setFormData({ ...formData, description: result.description });
-      toast({ title: "Description Generated", description: "AI has refreshed your app description." });
+      toast({ title: "Description Updated", description: "AI rewrite applied successfully." });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "AI Error", description: "Failed to generate description." });
+      toast({ variant: "destructive", title: "AI Error", description: "Could not generate description." });
     } finally {
       setGenerating(false);
     }
@@ -141,7 +141,7 @@ export default function EditAppPage() {
 
   const handleUpdate = async () => {
     if (!formData.name || !formData.version) {
-      toast({ variant: "destructive", title: "Validation Error", description: "App Name and Version are required." });
+      toast({ variant: "destructive", title: "Missing Required Fields", description: "App name and version are required." });
       return;
     }
 
@@ -152,6 +152,7 @@ export default function EditAppPage() {
       let apkUrl = formData.apk_url;
       let screenshotUrl = formData.screenshot_url;
 
+      // Handle Icon Update
       if (imageFile) {
         const ext = imageFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
@@ -162,6 +163,7 @@ export default function EditAppPage() {
       }
       setUploadProgress(30);
 
+      // Handle APK Update
       if (apkFile) {
         const ext = apkFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
@@ -172,6 +174,7 @@ export default function EditAppPage() {
       }
       setUploadProgress(60);
 
+      // Handle Screenshot Update
       if (screenshotFile) {
         const ext = screenshotFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
@@ -195,7 +198,7 @@ export default function EditAppPage() {
       if (dbError) throw dbError;
 
       setUploadProgress(100);
-      toast({ title: "Success!", description: "App details updated successfully." });
+      toast({ title: "App Updated Successfully" });
       router.push("/admin/dashboard");
     } catch (err: any) {
       console.error("Update Error:", err);
@@ -215,34 +218,46 @@ export default function EditAppPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/10">
+    <div className="min-h-screen bg-muted/10 pb-20 lg:pb-0">
       <Navigation />
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link href="/admin/dashboard" className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-primary mb-6 transition-colors">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-        </Link>
-
-        <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-border/50 space-y-8">
-          <div>
-            <h1 className="text-3xl font-black">Edit {formData.name}</h1>
-            <p className="text-muted-foreground">Update app assets or metadata in the marketplace.</p>
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/admin/dashboard" className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-primary transition-colors">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+          </Link>
+          <div className="flex gap-2">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="rounded-full font-bold h-9">
+                <Home className="mr-2 h-4 w-4" /> Home
+              </Button>
+            </Link>
           </div>
+        </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-border/50 space-y-10">
+          <header className="space-y-2">
+            <h1 className="text-4xl font-black tracking-tight">Edit Application</h1>
+            <p className="text-muted-foreground font-medium text-lg">Update assets and metadata for <span className="text-primary font-bold">{formData.name}</span>.</p>
+          </header>
+
+          <div className="grid md:grid-cols-3 gap-8">
             <div className="space-y-3">
-              <Label className="font-bold">Icon</Label>
+              <Label className="font-black uppercase tracking-widest text-[10px] text-muted-foreground">App Icon</Label>
               <div 
                 onClick={() => iconInputRef.current?.click()}
-                className="group relative border-2 border-dashed rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-all aspect-square overflow-hidden"
+                className="group relative border-2 border-dashed rounded-[2.5rem] p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/30 transition-all aspect-square overflow-hidden bg-muted/10"
               >
                 {imagePreview ? (
                   <div className="relative w-full h-full">
-                    <Image src={imagePreview} alt="Preview" fill className="object-cover rounded-xl" />
+                    <Image src={imagePreview} alt="Preview" fill className="object-cover rounded-[1.5rem]" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-[1.5rem]">
+                       <Upload className="h-8 w-8 text-white" />
+                    </div>
                   </div>
                 ) : (
                   <>
-                    <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span className="text-xs font-bold text-muted-foreground">Browse Icon</span>
+                    <ImageIcon className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                    <span className="text-xs font-black uppercase text-muted-foreground">Change Icon</span>
                   </>
                 )}
                 <input type="file" ref={iconInputRef} accept="image/*" className="hidden" onChange={handleImageChange} />
@@ -250,33 +265,38 @@ export default function EditAppPage() {
             </div>
 
             <div className="space-y-3">
-              <Label className="font-bold">APK Update</Label>
+              <Label className="font-black uppercase tracking-widest text-[10px] text-muted-foreground">APK Package</Label>
               <div 
                 onClick={() => apkInputRef.current?.click()}
-                className="group border-2 border-dashed rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-all aspect-square"
+                className="group border-2 border-dashed rounded-[2.5rem] p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/30 transition-all aspect-square bg-muted/10"
               >
-                <div className={`p-4 rounded-2xl ${apkFile ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                  <FileArchive className="h-10 w-10 group-hover:scale-110 transition-transform" />
+                <div className={`p-6 rounded-[2rem] ${apkFile ? 'bg-primary/10 text-primary' : 'bg-muted/50 text-muted-foreground'}`}>
+                  <FileArchive className="h-12 w-12 group-hover:scale-110 transition-transform" />
                 </div>
-                <span className="text-xs font-bold mt-4 text-center">{apkFile ? "New APK Ready" : "Upload New APK"}</span>
+                <span className="text-xs font-black mt-4 text-center uppercase text-muted-foreground">
+                  {apkFile ? "New APK Ready" : "Replace APK File"}
+                </span>
                 <input type="file" ref={apkInputRef} accept=".apk" className="hidden" onChange={(e) => setApkFile(e.target.files?.[0] || null)} />
               </div>
             </div>
 
             <div className="space-y-3">
-              <Label className="font-bold">Screenshot</Label>
+              <Label className="font-black uppercase tracking-widest text-[10px] text-muted-foreground">Screenshots</Label>
               <div 
                 onClick={() => screenshotInputRef.current?.click()}
-                className="group relative border-2 border-dashed rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-all aspect-square overflow-hidden"
+                className="group relative border-2 border-dashed rounded-[2.5rem] p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/30 transition-all aspect-square overflow-hidden bg-muted/10"
               >
                 {screenshotPreview ? (
                   <div className="relative w-full h-full">
-                    <Image src={screenshotPreview} alt="Preview" fill className="object-cover rounded-xl" />
+                    <Image src={screenshotPreview} alt="Preview" fill className="object-cover rounded-[1.5rem]" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-[1.5rem]">
+                       <Upload className="h-8 w-8 text-white" />
+                    </div>
                   </div>
                 ) : (
                   <>
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span className="text-xs font-bold text-muted-foreground">Update Screen</span>
+                    <ImageIcon className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                    <span className="text-xs font-black uppercase text-muted-foreground">Replace Screen</span>
                   </>
                 )}
                 <input type="file" ref={screenshotInputRef} accept="image/*" className="hidden" onChange={handleScreenshotChange} />
@@ -284,21 +304,31 @@ export default function EditAppPage() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="font-bold">App Name</Label>
-              <Input id="name" className="rounded-2xl h-14 font-medium bg-muted/30 border-none" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <Label htmlFor="name" className="font-black uppercase tracking-widest text-[10px] text-muted-foreground ml-1">App Name</Label>
+              <Input 
+                id="name" 
+                className="rounded-2xl h-14 font-black text-lg bg-muted/30 border-none focus-visible:ring-primary px-6" 
+                value={formData.name} 
+                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="version" className="font-bold">Version</Label>
-              <Input id="version" className="rounded-2xl h-14 font-medium bg-muted/30 border-none" value={formData.version} onChange={(e) => setFormData({...formData, version: e.target.value})} />
+            <div className="space-y-3">
+              <Label htmlFor="version" className="font-black uppercase tracking-widest text-[10px] text-muted-foreground ml-1">Version Number</Label>
+              <Input 
+                id="version" 
+                className="rounded-2xl h-14 font-black text-lg bg-muted/30 border-none focus-visible:ring-primary px-6" 
+                value={formData.version} 
+                onChange={(e) => setFormData({...formData, version: e.target.value})} 
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="font-bold">Category</Label>
+          <div className="space-y-3">
+            <Label className="font-black uppercase tracking-widest text-[10px] text-muted-foreground ml-1">App Category</Label>
             <Select value={formData.category} onValueChange={(v) => setFormData({...formData, category: v})}>
-              <SelectTrigger className="rounded-2xl h-14 bg-muted/30 border-none">
+              <SelectTrigger className="rounded-2xl h-14 bg-muted/30 border-none text-lg font-black px-6">
                 <SelectValue placeholder="Select Category" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
@@ -307,18 +337,20 @@ export default function EditAppPage() {
                 <SelectItem value="Productivity">Productivity</SelectItem>
                 <SelectItem value="Photography">Photography</SelectItem>
                 <SelectItem value="Tools">Tools</SelectItem>
+                <SelectItem value="Education">Education</SelectItem>
+                <SelectItem value="Entertainment">Entertainment</SelectItem>
                 <SelectItem value="General">General</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="desc" className="font-bold">Description</Label>
+              <Label htmlFor="desc" className="font-black uppercase tracking-widest text-[10px] text-muted-foreground ml-1">Description</Label>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="rounded-full bg-primary/5 border-primary/20 text-primary font-bold hover:bg-primary/10"
+                className="rounded-full bg-primary/5 border-primary/20 text-primary font-black hover:bg-primary/10 transition-colors"
                 onClick={handleAiGenerate}
                 disabled={generating || !formData.name}
               >
@@ -328,29 +360,37 @@ export default function EditAppPage() {
             </div>
             <Textarea 
               id="desc" 
-              className="rounded-3xl min-h-[160px] bg-muted/30 border-none p-6"
+              className="rounded-[2.5rem] min-h-[220px] bg-muted/30 border-none p-8 text-lg font-medium leading-relaxed resize-none focus-visible:ring-primary shadow-inner"
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
             />
           </div>
 
           {saving && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-black uppercase tracking-widest text-primary">
-                <span>Saving Changes...</span>
+            <div className="space-y-3">
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                <span>Saving to Cloud...</span>
                 <span>{uploadProgress}%</span>
               </div>
-              <Progress value={uploadProgress} className="h-2" />
+              <Progress value={uploadProgress} className="h-2.5 bg-muted rounded-full" />
             </div>
           )}
 
-          <Button 
-            onClick={handleUpdate} 
-            disabled={saving}
-            className="w-full h-16 rounded-[2rem] text-xl font-black shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
-          >
-            {saving ? <Loader2 className="animate-spin mr-2" /> : "Save Changes"}
-          </Button>
+          <div className="flex gap-4">
+             <Link href="/admin/dashboard" className="flex-1">
+                <Button variant="outline" className="w-full h-16 rounded-[2rem] text-xl font-black border-border/50 hover:bg-muted/50">
+                   Cancel
+                </Button>
+             </Link>
+             <Button 
+                onClick={handleUpdate} 
+                disabled={saving}
+                className="flex-[2] h-16 rounded-[2rem] text-xl font-black shadow-2xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all"
+              >
+                {saving ? <Loader2 className="animate-spin mr-2 h-6 w-6" /> : <Save className="mr-3 h-6 w-6" />}
+                Update Application
+              </Button>
+          </div>
         </div>
       </main>
     </div>
