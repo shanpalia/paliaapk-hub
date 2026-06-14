@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -19,6 +20,7 @@ import { generateAppDescription } from "@/ai/flows/generate-app-description";
 export default function EditAppPage() {
   const params = useParams();
   const id = params.id as string;
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -48,6 +50,16 @@ export default function EditAppPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.email !== "shanpalia786@gmail.com") {
+        router.push("/auth/login");
+      } else {
+        setCheckingAuth(false);
+        fetchApp();
+      }
+    };
+
     const fetchApp = async () => {
       try {
         const { data, error } = await supabase
@@ -78,7 +90,7 @@ export default function EditAppPage() {
       }
     };
 
-    if (id) fetchApp();
+    if (id) checkAuth();
   }, [id, router, toast]);
 
   useEffect(() => {
@@ -140,40 +152,36 @@ export default function EditAppPage() {
       let apkUrl = formData.apk_url;
       let screenshotUrl = formData.screenshot_url;
 
-      // 1. Upload Icon if changed
       if (imageFile) {
         const ext = imageFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-        const { data, error } = await supabase.storage.from('app-icons').upload(path, imageFile);
-        if (error) throw { source: 'Bucket: app-icons', ...error };
+        const { error } = await supabase.storage.from('app-icons').upload(path, imageFile);
+        if (error) throw error;
         const { data: { publicUrl } } = supabase.storage.from('app-icons').getPublicUrl(path);
         icon_url = publicUrl;
       }
       setUploadProgress(30);
 
-      // 2. Upload APK if changed
       if (apkFile) {
         const ext = apkFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-        const { data, error } = await supabase.storage.from('apk-files').upload(path, apkFile);
-        if (error) throw { source: 'Bucket: apk-files', ...error };
+        const { error } = await supabase.storage.from('apk-files').upload(path, apkFile);
+        if (error) throw error;
         const { data: { publicUrl } } = supabase.storage.from('apk-files').getPublicUrl(path);
         apkUrl = publicUrl;
       }
       setUploadProgress(60);
 
-      // 3. Upload Screenshot if changed
       if (screenshotFile) {
         const ext = screenshotFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-        const { data, error } = await supabase.storage.from('screenshots').upload(path, screenshotFile);
-        if (error) throw { source: 'Bucket: screenshots', ...error };
+        const { error } = await supabase.storage.from('screenshots').upload(path, screenshotFile);
+        if (error) throw error;
         const { data: { publicUrl } } = supabase.storage.from('screenshots').getPublicUrl(path);
         screenshotUrl = publicUrl;
       }
       setUploadProgress(85);
 
-      // 4. Update Database
       const { error: dbError } = await supabase.from('apps').update({
         app_name: formData.name,
         category: formData.category,
@@ -184,33 +192,24 @@ export default function EditAppPage() {
         screenshot_url: screenshotUrl
       }).eq('id', id);
 
-      if (dbError) throw { source: 'Table: apps', ...dbError };
+      if (dbError) throw dbError;
 
       setUploadProgress(100);
       toast({ title: "Success!", description: "App details updated successfully." });
       router.push("/admin/dashboard");
     } catch (err: any) {
       console.error("Update Error:", err);
-      const errorDisplay = (
-        <div className="mt-4 space-y-2 text-[11px] font-mono whitespace-pre-wrap max-h-[200px] overflow-auto border-t pt-4 border-destructive/20">
-          <p className="font-black text-xs uppercase text-red-500">Error Report</p>
-          <p><span className="font-black">Source:</span> {err.source || 'Generic'}</p>
-          <p><span className="font-black">Code:</span> {err.code || 'N/A'}</p>
-          <p><span className="font-black">Message:</span> {err.message || 'An unexpected error occurred.'}</p>
-        </div>
-      );
-      toast({ variant: "destructive", title: "Update Failed", description: errorDisplay, duration: 10000 });
+      toast({ variant: "destructive", title: "Update Failed", description: err.message });
       setUploadProgress(0);
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
+  if (checkingAuth || loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-muted/10">
+      <div className="min-h-screen flex items-center justify-center bg-muted/10">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 font-black text-muted-foreground uppercase tracking-widest text-xs">Loading App Data...</p>
       </div>
     );
   }
@@ -239,9 +238,6 @@ export default function EditAppPage() {
                 {imagePreview ? (
                   <div className="relative w-full h-full">
                     <Image src={imagePreview} alt="Preview" fill className="object-cover rounded-xl" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <p className="text-white text-xs font-bold uppercase">Change</p>
-                    </div>
                   </div>
                 ) : (
                   <>
@@ -265,7 +261,6 @@ export default function EditAppPage() {
                 <span className="text-xs font-bold mt-4 text-center">{apkFile ? "New APK Ready" : "Upload New APK"}</span>
                 <input type="file" ref={apkInputRef} accept=".apk" className="hidden" onChange={(e) => setApkFile(e.target.files?.[0] || null)} />
               </div>
-              {apkFile && <p className="text-[10px] font-bold text-primary truncate text-center">{apkFile.name}</p>}
             </div>
 
             <div className="space-y-3">
@@ -277,21 +272,6 @@ export default function EditAppPage() {
                 {screenshotPreview ? (
                   <div className="relative w-full h-full">
                     <Image src={screenshotPreview} alt="Preview" fill className="object-cover rounded-xl" />
-                    <div className="absolute top-2 right-2 z-20">
-                      <Button 
-                        size="icon" 
-                        variant="destructive" 
-                        className="h-6 w-6 rounded-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setScreenshotFile(null);
-                          setScreenshotPreview(null);
-                          setFormData({...formData, screenshot_url: ""});
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
                   </div>
                 ) : (
                   <>

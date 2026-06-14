@@ -72,6 +72,7 @@ export default function AdminDashboard() {
       } catch (err: any) {
         console.error("Auth check failed:", err.message);
         setLoading(false);
+        router.push("/auth/login");
       }
     };
 
@@ -121,6 +122,14 @@ export default function AdminDashboard() {
     { label: "Active Categories", value: Array.from(new Set(apps.map(a => a.category))).length.toString(), icon: LayoutGrid, color: "text-green-500" },
     { label: "System Status", value: !showConfigAlert ? "Online" : "Offline", icon: BarChart3, color: !showConfigAlert ? "text-purple-500" : "text-destructive" },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/10">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -183,61 +192,57 @@ export default function AdminDashboard() {
           </div>
           
           <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-card">
-            {loading ? (
-              <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
-            ) : (
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="border-border">
-                    <TableHead className="font-bold">Application</TableHead>
-                    <TableHead className="font-bold">Version</TableHead>
-                    <TableHead className="font-bold">Category</TableHead>
-                    <TableHead className="font-bold">Downloads</TableHead>
-                    <TableHead className="font-bold">Uploaded On</TableHead>
-                    <TableHead className="text-right font-bold">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {apps.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">No apps found</TableCell></TableRow>
-                  ) : apps.map((app) => (
-                    <TableRow key={app.id} className="border-border hover:bg-muted/10 transition-colors">
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                           <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
-                              <Image 
-                                src={app.icon_url || "https://picsum.photos/seed/app/40/40"} 
-                                alt={app.app_name} 
-                                fill 
-                                className="object-cover" 
-                              />
-                           </div>
-                           <span>{app.app_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-xs">{app.version}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-normal border-primary/20 text-primary">{app.category}</Badge>
-                      </TableCell>
-                      <TableCell className="font-bold">{app.downloads}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{new Date(app.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                           <Link href={`/admin/edit/${app.id}`}>
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                                <Edit className="h-4 w-4" />
-                             </Button>
-                           </Link>
-                           <Button onClick={() => handleDelete(app.id, app.app_name)} variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive/80">
-                              <Trash2 className="h-4 w-4" />
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="border-border">
+                  <TableHead className="font-bold">Application</TableHead>
+                  <TableHead className="font-bold">Version</TableHead>
+                  <TableHead className="font-bold">Category</TableHead>
+                  <TableHead className="font-bold">Downloads</TableHead>
+                  <TableHead className="font-bold">Uploaded On</TableHead>
+                  <TableHead className="text-right font-bold">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {apps.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">No apps found</TableCell></TableRow>
+                ) : apps.map((app) => (
+                  <TableRow key={app.id} className="border-border hover:bg-muted/10 transition-colors">
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-3">
+                         <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
+                            <Image 
+                              src={app.icon_url || "https://picsum.photos/seed/app/40/40"} 
+                              alt={app.app_name} 
+                              fill 
+                              className="object-cover" 
+                            />
+                         </div>
+                         <span>{app.app_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">{app.version}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-normal border-primary/20 text-primary">{app.category}</Badge>
+                    </TableCell>
+                    <TableCell className="font-bold">{app.downloads}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{new Date(app.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                         <Link href={`/admin/edit/${app.id}`}>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                              <Edit className="h-4 w-4" />
                            </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                         </Link>
+                         <Button onClick={() => handleDelete(app.id, app.app_name)} variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive/80">
+                            <Trash2 className="h-4 w-4" />
+                         </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </Card>
         </div>
       </main>

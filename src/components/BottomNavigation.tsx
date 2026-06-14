@@ -2,12 +2,57 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, Search, LayoutGrid, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export function BottomNavigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [clickCount, setClickCount] = useState(0);
+  const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleProfileClick = (e: React.MouseEvent) => {
+    // Only intercept if we're doing the secret sequence
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = setTimeout(() => {
+      setClickCount(0);
+    }, 5000);
+
+    if (newCount < 5) {
+      toast({ 
+        title: `Click ${newCount}/5`, 
+        duration: 1000 
+      });
+    } else {
+      e.preventDefault();
+      setClickCount(0);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      
+      toast({ 
+        title: "Secret Mode Activated", 
+        description: "Redirecting to security check...",
+        duration: 2000 
+      });
+
+      const pin = window.prompt("Enter Security PIN");
+      if (pin === "7227") {
+        router.push("/auth/login?admin=true");
+      } else if (pin !== null) {
+        toast({ 
+          variant: "destructive", 
+          title: "Invalid Security PIN",
+          description: "Access denied."
+        });
+      }
+    }
+  };
 
   const navItems = [
     { name: "Home", href: "/", icon: Home },
@@ -24,10 +69,13 @@ export function BottomNavigation() {
       <div className="flex items-center justify-between max-w-md mx-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
+          const isProfile = item.name === "Profile";
+          
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={isProfile ? handleProfileClick : undefined}
               className={cn(
                 "flex flex-col items-center gap-1 transition-all duration-300",
                 isActive ? "text-primary scale-110" : "text-muted-foreground"

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -17,6 +18,7 @@ import Image from "next/image";
 import { generateAppDescription } from "@/ai/flows/generate-app-description";
 
 export default function AddAppPage() {
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -39,6 +41,18 @@ export default function AddAppPage() {
 
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.email !== "shanpalia786@gmail.com") {
+        router.push("/auth/login");
+      } else {
+        setCheckingAuth(false);
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   const isFormValid = formData.name && formData.version && formData.description && imageFile && apkFile;
 
@@ -103,18 +117,7 @@ export default function AddAppPage() {
       const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${iconExt}`;
       const { data: iconData, error: iconError } = await supabase.storage.from('app-icons').upload(iconPath, imageFile!);
       
-      if (iconError) {
-        console.error("RAW_ICON_UPLOAD_ERROR:", iconError);
-        throw { 
-          source: 'Storage Bucket: app-icons',
-          fileName: imageFile!.name,
-          message: iconError.message,
-          code: (iconError as any).code || (iconError as any).statusCode || 'UNKNOWN_CODE',
-          details: (iconError as any).details || 'No additional details provided by Supabase.',
-          hint: (iconError as any).hint || 'No hint available.',
-          response: JSON.stringify(iconData || 'No response data')
-        };
-      }
+      if (iconError) throw iconError;
       
       const { data: { publicUrl: iconUrl } } = supabase.storage.from('app-icons').getPublicUrl(iconPath);
       setUploadProgress(30);
@@ -124,18 +127,7 @@ export default function AddAppPage() {
       const apkPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${apkExt}`;
       const { data: apkData, error: apkError } = await supabase.storage.from('apk-files').upload(apkPath, apkFile!);
       
-      if (apkError) {
-        console.error("RAW_APK_UPLOAD_ERROR:", apkError);
-        throw { 
-          source: 'Storage Bucket: apk-files',
-          fileName: apkFile!.name,
-          message: apkError.message,
-          code: (apkError as any).code || (apkError as any).statusCode || 'UNKNOWN_CODE',
-          details: (apkError as any).details || 'No additional details provided by Supabase.',
-          hint: (apkError as any).hint || 'No hint available.',
-          response: JSON.stringify(apkData || 'No response data')
-        };
-      }
+      if (apkError) throw apkError;
 
       const { data: { publicUrl: apkUrl } } = supabase.storage.from('apk-files').getPublicUrl(apkPath);
       setUploadProgress(60);
@@ -145,20 +137,9 @@ export default function AddAppPage() {
       if (screenshotFile) {
         const ssExt = screenshotFile.name.split('.').pop();
         const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ssExt}`;
-        const { data: ssData, error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
+        const { error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
         
-        if (ssError) {
-          console.error("RAW_SCREENSHOT_UPLOAD_ERROR:", ssError);
-          throw { 
-            source: 'Storage Bucket: screenshots',
-            fileName: screenshotFile.name,
-            message: ssError.message,
-            code: (ssError as any).code || (ssError as any).statusCode || 'UNKNOWN_CODE',
-            details: (ssError as any).details || 'No additional details provided by Supabase.',
-            hint: (ssError as any).hint || 'No hint available.',
-            response: JSON.stringify(ssData || 'No response data')
-          };
-        }
+        if (ssError) throw ssError;
 
         const { data: { publicUrl: ssUrl } } = supabase.storage.from('screenshots').getPublicUrl(ssPath);
         screenshotUrl = ssUrl;
@@ -178,48 +159,31 @@ export default function AddAppPage() {
         created_at: new Date().toISOString()
       });
 
-      if (dbError) {
-        console.error("RAW_DATABASE_INSERT_ERROR:", dbError);
-        throw { 
-          source: 'Database Table: apps',
-          message: dbError.message,
-          code: dbError.code,
-          details: dbError.details || 'No specific database details.',
-          hint: dbError.hint || 'Check if columns and RLS policies match.',
-          response: 'Database insert failed'
-        };
-      }
+      if (dbError) throw dbError;
 
       setUploadProgress(100);
       toast({ title: "Success!", description: "App published successfully." });
       router.push("/admin/dashboard");
     } catch (err: any) {
       console.error("Critical Publishing Error:", err);
-      
-      const errorDisplay = (
-        <div className="mt-4 space-y-2 text-[11px] font-mono whitespace-pre-wrap max-h-[300px] overflow-auto border-t pt-4 border-destructive/20">
-          <p className="font-black text-xs uppercase text-red-500">Error Report</p>
-          <p><span className="font-black">Source:</span> {err.source || 'Generic Runtime'}</p>
-          {err.fileName && <p><span className="font-black">File:</span> {err.fileName}</p>}
-          <p><span className="font-black">Code:</span> {err.code || 'N/A'}</p>
-          <p><span className="font-black">Message:</span> {err.message || 'An unexpected error occurred.'}</p>
-          <p><span className="font-black">Details:</span> {err.details || 'N/A'}</p>
-          <p><span className="font-black">Hint:</span> {err.hint || 'N/A'}</p>
-          <p className="mt-2 text-[9px] opacity-70"><span className="font-black">Raw Response:</span> {err.response || 'No response object'}</p>
-        </div>
-      );
-
       toast({ 
         variant: "destructive", 
         title: "Publishing Failed", 
-        description: errorDisplay,
-        duration: 10000,
+        description: err.message,
       });
       setUploadProgress(0);
     } finally {
       setLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/10">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/10">
@@ -245,9 +209,6 @@ export default function AddAppPage() {
                 {imagePreview ? (
                   <div className="relative w-full h-full">
                     <Image src={imagePreview} alt="Preview" fill className="object-cover rounded-xl" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <p className="text-white text-xs font-bold">Change Image</p>
-                    </div>
                   </div>
                 ) : (
                   <>
@@ -263,7 +224,6 @@ export default function AddAppPage() {
                   onChange={handleImageChange}
                 />
               </div>
-              {imageFile && <p className="text-[10px] font-bold text-primary truncate text-center">{imageFile.name}</p>}
             </div>
 
             <div className="space-y-3">
@@ -284,7 +244,6 @@ export default function AddAppPage() {
                   onChange={(e) => setApkFile(e.target.files?.[0] || null)}
                 />
               </div>
-              {apkFile && <p className="text-[10px] font-bold text-primary truncate text-center">{apkFile.name}</p>}
             </div>
 
             <div className="space-y-3">
@@ -392,7 +351,7 @@ export default function AddAppPage() {
           </div>
 
           {loading && (
-            <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2">
+            <div className="space-y-2">
               <div className="flex justify-between text-xs font-black uppercase tracking-widest text-primary">
                 <span>Publishing Assets...</span>
                 <span>{uploadProgress}%</span>
