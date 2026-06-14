@@ -11,7 +11,9 @@
     "export": "next build && next export",
     "cap:sync": "next build && npx cap sync",
     "cap:open": "npx cap open android",
-    "cap:add": "npx cap add android"
+    "cap:add": "npx cap add android",
+    "build:android": "npm run export && npx cap sync && npx cap open android",
+    "export:project": "zip -r plkapk-hub-export.zip . -x 'node_modules/*' '.next/*' 'out/*' '.git/*'"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
