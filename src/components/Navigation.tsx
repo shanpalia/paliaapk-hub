@@ -47,7 +47,6 @@ export function Navigation() {
   }, []);
 
   const handleAdminTrigger = (e: React.MouseEvent) => {
-    // We only trigger PIN modal on the 5th click
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
       setAdminClickCount(0);
@@ -109,7 +108,7 @@ export function Navigation() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-xl shadow-lg shadow-primary/20">
               P
             </div>
-            <span className="hidden font-headline text-xl font-bold tracking-tight sm:inline-block">
+            <span className="hidden font-headline text-xl font-black tracking-tight sm:inline-block">
               PLKAPK Hub
             </span>
           </Link>
@@ -119,7 +118,7 @@ export function Navigation() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted ${
+                className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black transition-colors hover:bg-muted ${
                   pathname === link.href ? "bg-primary/10 text-primary" : "text-muted-foreground"
                 }`}
               >
@@ -135,7 +134,7 @@ export function Navigation() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search apps..."
-              className="pl-10 h-10 bg-muted/50 border-none rounded-full"
+              className="pl-10 h-10 bg-muted/30 border-none rounded-full font-medium"
             />
           </div>
 
@@ -144,9 +143,8 @@ export function Navigation() {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      className="relative h-10 w-10 rounded-full p-0"
+                    <button 
+                      className="relative h-10 w-10 rounded-full outline-none focus:ring-2 focus:ring-primary/20 ring-offset-2 transition-all"
                       onClick={handleAdminTrigger}
                     >
                       <Avatar className="h-10 w-10 border-2 border-primary/20">
@@ -154,46 +152,45 @@ export function Navigation() {
                           {userInitial}
                         </AvatarFallback>
                       </Avatar>
-                    </Button>
+                    </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56 rounded-2xl p-2" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
+                  <DropdownMenuContent className="w-64 rounded-[2rem] p-3 shadow-2xl border-border/50" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal px-4 py-3">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-black leading-none">{user.email?.split('@')[0]}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                        <p className="text-base font-black leading-none">{user.email?.split('@')[0]}</p>
+                        <p className="text-xs font-medium leading-none text-muted-foreground">{user.email}</p>
                       </div>
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="my-2" />
                     <Link href="/profile">
-                      <DropdownMenuItem className="rounded-xl cursor-pointer">
-                        <User className="mr-2 h-4 w-4" /> My Profile
+                      <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
+                        <User className="mr-3 h-5 w-5 text-muted-foreground" /> My Profile
                       </DropdownMenuItem>
                     </Link>
                     <Link href="/profile">
-                      <DropdownMenuItem className="rounded-xl cursor-pointer">
-                        <History className="mr-2 h-4 w-4" /> Downloads
+                      <DropdownMenuItem className="rounded-xl cursor-pointer font-bold px-4 py-2.5">
+                        <History className="mr-3 h-5 w-5 text-muted-foreground" /> Downloads
                       </DropdownMenuItem>
                     </Link>
                     {isAdmin && (
                       <>
-                        <DropdownMenuSeparator />
+                        <DropdownMenuSeparator className="my-2" />
                         <Link href="/admin/dashboard">
-                          <DropdownMenuItem className="rounded-xl cursor-pointer font-bold text-primary">
-                            <Settings className="mr-2 h-4 w-4" /> Admin Panel
+                          <DropdownMenuItem className="rounded-xl cursor-pointer font-black text-primary px-4 py-2.5 bg-primary/5">
+                            <Settings className="mr-3 h-5 w-5" /> Admin Panel
                           </DropdownMenuItem>
                         </Link>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive focus:text-destructive">
-                          <LogOut className="mr-2 h-4 w-4" /> Logout
-                        </DropdownMenuItem>
                       </>
                     )}
+                    <DropdownMenuSeparator className="my-2" />
+                    <DropdownMenuItem onClick={handleSignOut} className="rounded-xl cursor-pointer text-destructive font-black px-4 py-2.5 focus:bg-destructive/5 focus:text-destructive">
+                      <LogOut className="mr-3 h-5 w-5" /> Logout
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button 
-                  variant="ghost" 
-                  className="relative h-10 w-10 rounded-full p-0"
+                <button 
+                  className="relative h-10 w-10 rounded-full outline-none hover:ring-2 hover:ring-muted transition-all"
                   onClick={(e) => {
                     handleAdminTrigger(e);
                     if (adminClickCount === 0) router.push("/auth/login");
@@ -204,7 +201,7 @@ export function Navigation() {
                       <User className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
-                </Button>
+                </button>
               )}
             </div>
           </div>

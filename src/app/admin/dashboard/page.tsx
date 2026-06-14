@@ -15,7 +15,10 @@ import {
   Search,
   LayoutGrid,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  Home,
+  ArrowLeft
 } from "lucide-react";
 import { 
   Table, 
@@ -41,6 +44,25 @@ export default function AdminDashboard() {
   const [isInvalidKey, setIsInvalidKey] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  const fetchApps = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('apps')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        if (error.message === "Invalid API key") setIsInvalidKey(true);
+        throw error;
+      }
+      setApps(data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -76,37 +98,34 @@ export default function AdminDashboard() {
       }
     };
 
-    const fetchApps = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('apps')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          if (error.message === "Invalid API key") setIsInvalidKey(true);
-          throw error;
-        }
-        setApps(data || []);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     checkAuth();
   }, [router, toast]);
 
-  const handleDelete = async (id: string, name: string) => {
+  const extractPathFromUrl = (url: string, bucket: string) => {
+    if (!url) return null;
+    const parts = url.split(`${bucket}/`);
+    return parts.length > 1 ? parts[1] : null;
+  };
+
+  const handleDelete = async (app: AppData) => {
     if (!isSupabaseConfigured || isInvalidKey) return;
-    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+    if (!confirm(`Are you sure you want to delete ${app.app_name}? This will also delete all associated files from storage.`)) return;
 
     try {
-      const { error } = await supabase.from('apps').delete().eq('id', id);
+      // 1. Delete from Storage Buckets
+      const iconPath = extractPathFromUrl(app.icon_url, 'app-icons');
+      const apkPath = extractPathFromUrl(app.apk_url, 'apk-files');
+      const ssPath = extractPathFromUrl(app.screenshot_url || '', 'screenshots');
+
+      if (iconPath) await supabase.storage.from('app-icons').remove([iconPath]);
+      if (apkPath) await supabase.storage.from('apk-files').remove([apkPath]);
+      if (ssPath) await supabase.storage.from('screenshots').remove([ssPath]);
+
+      // 2. Delete from Database
+      const { error } = await supabase.from('apps').delete().eq('id', app.id);
       if (error) throw error;
       
-      setApps(apps.filter(app => app.id !== id));
+      setApps(apps.filter(a => a.id !== app.id));
       toast({ title: "App deleted successfully" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Failed to delete app", description: err.message });
@@ -151,9 +170,16 @@ export default function AdminDashboard() {
         )}
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight">Admin Console</h1>
-            <p className="text-muted-foreground">Manage your marketplace repository and monitor performance.</p>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Link href="/">
+                 <Button variant="outline" size="sm" className="rounded-full font-bold h-8 text-xs gap-1">
+                    <Home className="h-3 w-3" /> Exit Admin
+                 </Button>
+              </Link>
+            </div>
+            <h1 className="text-3xl font-black tracking-tight mt-2">Admin Console</h1>
+            <p className="text-muted-foreground text-sm">Manage your marketplace repository and monitor performance.</p>
           </div>
           <div className="flex gap-2">
             <Link href="/admin/add">
@@ -218,24 +244,29 @@ export default function AdminDashboard() {
                               className="object-cover" 
                             />
                          </div>
-                         <span>{app.app_name}</span>
+                         <span className="font-black">{app.app_name}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">{app.version}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-normal border-primary/20 text-primary">{app.category}</Badge>
+                      <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-primary/20 text-primary">{app.category}</Badge>
                     </TableCell>
-                    <TableCell className="font-bold">{app.downloads}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{new Date(app.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-black">{app.downloads}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm font-medium">{new Date(app.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                         <Link href={`/admin/edit/${app.id}`}>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                              <Edit className="h-4 w-4" />
+                         <Link href={`/apps/${app.id}`}>
+                           <Button variant="ghost" size="icon" title="View Store Page" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10">
+                              <Eye className="h-5 w-5" />
                            </Button>
                          </Link>
-                         <Button onClick={() => handleDelete(app.id, app.app_name)} variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive/80">
-                            <Trash2 className="h-4 w-4" />
+                         <Link href={`/admin/edit/${app.id}`}>
+                           <Button variant="ghost" size="icon" title="Edit App" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted">
+                              <Edit className="h-5 w-5" />
+                           </Button>
+                         </Link>
+                         <Button onClick={() => handleDelete(app)} variant="ghost" size="icon" title="Delete App" className="h-10 w-10 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-5 w-5" />
                          </Button>
                       </div>
                     </TableCell>
