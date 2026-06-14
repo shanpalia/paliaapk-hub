@@ -8,7 +8,6 @@ The ultimate, secure Android application marketplace. Built with Next.js, Capaci
 - **AI-Powered Copywriting**: Automatic app description generation using Google Gemini.
 - **Administrative Console**: Full management suite for apps, versions, and assets.
 - **Native Android Support**: Built with Capacitor 6 for a seamless mobile experience.
-- **Responsive Design**: Optimized for both mobile devices and desktop management.
 
 ## 🛠 Tech Stack
 
@@ -36,40 +35,31 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 GEMINI_API_KEY=your_google_ai_key
 ```
 
-### 3. Development
+### 3. Native Android Build
 
-```bash
-npm run dev
-```
+After your Nix environment has reloaded with Gradle and JDK 17:
 
----
-
-## 🤖 Android Build Instructions
-
-To generate a native APK, follow these steps:
-
-1. **Build the Web Project**:
+1. **Initialize the Gradle Wrapper**:
    ```bash
-   npm run build
+   npm run android:wrapper
    ```
 
-2. **Sync with Capacitor**:
+2. **Sync the Project**:
    ```bash
    npx cap sync
    ```
 
-3. **Open in Android Studio**:
+3. **Generate the Debug APK**:
    ```bash
-   npx cap open android
+   cd android
+   ./gradlew assembleDebug
    ```
 
-4. **Generate APK**:
-   Inside Android Studio, go to `Build > Build Bundle(s) / APK(s) > Build APK(s)`.
-
-For a detailed guide on signing and releasing, see [docs/android-build-guide.md](./docs/android-build-guide.md).
+The final APK will be located at:
+`android/app/build/outputs/apk/debug/app-debug.apk`
 
 ---
 
 ## 👨‍💻 Developed By
 
-**Shan Palia** - [GitHub](https://github.com/shanpalia)
+**Shan Palia**
