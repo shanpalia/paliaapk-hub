@@ -38,7 +38,7 @@ async function exportProject() {
   archive.pipe(output);
 
   // Glob patterns to include/exclude
-  // We explicitly include the android folder if it was generated
+  // We explicitly include the android folder
   archive.glob('**/*', {
     ignore: [
       'node_modules/**',
@@ -48,10 +48,10 @@ async function exportProject() {
       'plkapk-hub-export.zip',
       '**/.DS_Store'
     ],
-    dot: true // Include hidden files like .env templates
+    dot: true // Include hidden files
   });
 
-  console.log('Compressing project files...');
+  console.log('Compressing project files (including android folder)...');
   await archive.finalize();
 }
 
