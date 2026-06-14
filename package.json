@@ -14,7 +14,8 @@
     "cap:sync": "npx cap sync",
     "cap:open": "npx cap open android",
     "build:android": "npm run build && (npx cap add android || true) && npx cap sync",
-    "export:project": "node scripts/export-project.js"
+    "export:project": "node scripts/export-project.js",
+    "android:wrapper": "cd android && gradle wrapper"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
