@@ -33,36 +33,8 @@ export function Navigation() {
   }, []);
 
   const handleLogoClick = () => {
-    const newCount = clickCount + 1;
-    setClickCount(newCount);
-
-    // Reset counter if no click within 5 seconds
-    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    resetTimerRef.current = setTimeout(() => {
-      setClickCount(0);
-    }, 5000);
-
-    if (newCount < 5) {
-      toast({
-        title: `Click ${newCount}/5`,
-        description: "You are discovering a hidden path...",
-      });
-    } else {
-      setClickCount(0);
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-      
-      toast({ title: "Secret mode activated!" });
-      
-      const pin = prompt("Enter Security PIN");
-      if (pin === "7227") {
-        router.push("/auth/login?admin=true");
-      } else if (pin !== null) {
-        toast({
-          variant: "destructive",
-          title: "Invalid Security PIN",
-        });
-      }
-    }
+    console.log("LOGO WORKING");
+    alert("LOGO WORKING");
   };
 
   const navLinks = [
