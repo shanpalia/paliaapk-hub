@@ -11,8 +11,8 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Fragments and resource merging can be configured here
-             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+             // Leaves res/raw files uncompressed, now only for WAV files
+             noCompress 'wav'
         }
     }
     buildTypes {
@@ -33,16 +33,22 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "androidx.appcompat:appcompat:$rootProject.ext.androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$rootProject.ext.androidxCoordinatorLayoutVersion"
-    implementation "androidx.core:core:$rootProject.ext.androidxCoreVersion"
+    implementation "androidx.core:core-ktx:$rootProject.ext.androidxCoreVersion"
     implementation project(':capacitor-android')
     implementation project(':capacitor-cordova-android-plugins')
+    testImplementation "junit:junit:$rootProject.ext.junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$rootProject.ext.androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$rootProject.ext.androidxEspressoCoreVersion"
 }
 
+apply from: 'capacitor.build.gradle'
+
 try {
-    def servicesConfigeration = file('google-services.json')
-    if (servicesConfigeration.exists()) {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
         apply plugin: 'com.google.gms.google-services'
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
+    
