@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -8,23 +7,22 @@ import { Progress } from "@/components/ui/progress";
 import { 
   Download, 
   Star, 
-  ChevronRight, 
-  Info, 
   ShieldCheck, 
   History,
   Share2,
-  Bookmark
+  Bookmark,
+  ChevronLeft,
+  Info
 } from "lucide-react";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { summarizeAppDescription } from "@/ai/flows/app-description-summarization";
 
 export default function AppDetailsPage({ params }: { params: { id: string } }) {
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [summary, setSummary] = useState<string>("");
 
+  // Fallback if ID doesn't match a specific mock (for UI demo)
   const app = {
     id: params.id,
     name: "Notion - Notes, Docs, Tasks",
@@ -36,7 +34,7 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
     size: "42 MB",
     version: "0.24.11",
     lastUpdated: "Dec 12, 2023",
-    description: "Notion is a single space where you can think, write, and plan. Capture thoughts, manage projects, or even run an entire company — and do it exactly the way you want. Notion is the all-in-one workspace for your notes, tasks, wikis, and databases. Create custom workflows that fit your team's needs. Seamlessly sync between your computer and phone. Used by millions every day to organize their lives and work.",
+    description: "Notion is the all-in-one workspace for your notes, tasks, wikis, and databases. Create custom workflows that fit your team's needs. Seamlessly sync between your computer and phone. Used by millions every day to organize their lives and work.\n\nCapture thoughts, manage projects, or even run an entire company — and do it exactly the way you want.",
     iconUrl: PlaceHolderImages.find(i => i.id === "app-icon-3")?.imageUrl!,
     screenshots: [
       PlaceHolderImages.find(i => i.id === "screenshot-1")?.imageUrl!,
@@ -55,179 +53,158 @@ export default function AppDetailsPage({ params }: { params: { id: string } }) {
           setTimeout(() => setDownloadProgress(null), 2000);
           return 100;
         }
-        return prev + 5;
+        return prev + 10;
       });
-    }, 150);
-  };
-
-  const handleSummarize = async () => {
-    setIsSummarizing(true);
-    try {
-      const result = await summarizeAppDescription({ appDescription: app.description });
-      setSummary(result.summary);
-    } catch (error) {
-      console.error("AI summarization failed", error);
-    } finally {
-      setIsSummarizing(false);
-    }
+    }, 200);
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       <Navigation />
       
-      <main className="container mx-auto px-4 max-w-4xl pt-8">
-        {/* Header Info */}
-        <div className="flex flex-col md:flex-row gap-6 md:items-start">
-          <div className="h-28 w-28 md:h-36 md:w-36 rounded-[1.75rem] shadow-xl overflow-hidden bg-white border border-border/50 flex-shrink-0 mx-auto md:mx-0">
-            <Image src={app.iconUrl} alt={app.name} width={144} height={144} className="object-cover" />
-          </div>
-          <div className="flex-1 text-center md:text-left space-y-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{app.name}</h1>
-              <p className="text-primary font-bold mt-1">{app.developer}</p>
-              <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
-                <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10">#1 Productivity</Badge>
-                <Badge variant="outline">Contains Ads</Badge>
-              </div>
+      <main className="container mx-auto px-4 max-w-5xl py-8">
+        <Link href="/" className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-primary mb-8 transition-colors group">
+          <ChevronLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-1" /> Back to Marketplace
+        </Link>
+
+        {/* Hero Area */}
+        <div className="bg-card rounded-[2.5rem] p-6 md:p-10 border border-border/50 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
+          
+          <div className="flex flex-col md:flex-row gap-8 relative z-10">
+            <div className="h-32 w-32 md:h-44 md:w-44 rounded-[2.5rem] shadow-2xl shadow-primary/10 overflow-hidden bg-white border-4 border-white flex-shrink-0 mx-auto md:mx-0">
+              <Image src={app.iconUrl} alt={app.name} width={176} height={176} className="object-cover" />
             </div>
             
-            <div className="flex justify-center md:justify-start gap-8 py-2">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 font-bold text-lg">
-                  {app.rating} <Star className="h-4 w-4 fill-foreground" />
+            <div className="flex-1 space-y-6 text-center md:text-left">
+              <div>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight">{app.name}</h1>
+                <p className="text-primary font-black text-lg mt-2">{app.developer}</p>
+                <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none px-4 py-1 font-bold">#1 {app.category}</Badge>
+                  <Badge variant="outline" className="border-border rounded-full px-4">Official Release</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">{app.reviews} reviews</p>
               </div>
-              <div className="border-l border-border h-10 my-auto" />
-              <div className="text-center">
-                <div className="font-bold text-lg">{app.size}</div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">File Size</p>
-              </div>
-              <div className="border-l border-border h-10 my-auto" />
-              <div className="text-center">
-                <div className="font-bold text-lg">{app.downloads}</div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Downloads</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              {downloadProgress === null ? (
-                <Button onClick={handleDownload} size="lg" className="flex-1 md:flex-none rounded-full px-12 h-14 text-lg font-bold shadow-lg shadow-primary/20">
-                  <Download className="mr-2 h-5 w-5" /> Download APK
-                </Button>
-              ) : (
-                <div className="flex-1 space-y-2">
-                  <div className="flex justify-between text-sm font-bold">
-                    <span>Downloading...</span>
-                    <span>{downloadProgress}%</span>
+              
+              <div className="grid grid-cols-3 gap-4 py-4 border-y border-border/50">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 font-black text-xl">
+                    {app.rating} <Star className="h-5 w-5 fill-primary text-primary" />
                   </div>
-                  <Progress value={downloadProgress} className="h-4" />
+                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{app.reviews} Reviews</p>
                 </div>
-              )}
-              <Button variant="outline" size="icon" className="h-14 w-14 rounded-full border-border bg-white hover:bg-muted">
-                <Share2 className="h-5 w-5" />
-              </Button>
-              <Button variant="outline" size="icon" className="h-14 w-14 rounded-full border-border bg-white hover:bg-muted">
-                <Bookmark className="h-5 w-5" />
-              </Button>
+                <div className="text-center border-x border-border/50">
+                  <div className="font-black text-xl">{app.size}</div>
+                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Size</p>
+                </div>
+                <div className="text-center">
+                  <div className="font-black text-xl">{app.downloads}</div>
+                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Downloads</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                {downloadProgress === null ? (
+                  <Button onClick={handleDownload} size="lg" className="flex-1 rounded-2xl h-16 text-xl font-black shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
+                    <Download className="mr-3 h-6 w-6" /> Download APK
+                  </Button>
+                ) : (
+                  <div className="flex-1 bg-muted p-4 rounded-2xl border border-border/50">
+                    <div className="flex justify-between text-sm font-black mb-2 px-1">
+                      <span className="text-primary uppercase tracking-widest">Downloading...</span>
+                      <span>{downloadProgress}%</span>
+                    </div>
+                    <Progress value={downloadProgress} className="h-3 bg-white" />
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="icon" className="h-16 w-16 rounded-2xl border-border bg-white hover:bg-muted hover:text-primary transition-all">
+                    <Share2 className="h-6 w-6" />
+                  </Button>
+                  <Button variant="outline" size="icon" className="h-16 w-16 rounded-2xl border-border bg-white hover:bg-muted hover:text-primary transition-all">
+                    <Bookmark className="h-6 w-6" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Gallery */}
-        <div className="mt-12 overflow-x-auto no-scrollbar flex gap-4 -mx-4 px-4">
-          {app.screenshots.map((ss, idx) => (
-            <div key={idx} className="relative h-[400px] w-[225px] rounded-2xl overflow-hidden shadow-md flex-shrink-0 border border-border/50">
-              <Image src={ss} alt={`Screenshot ${idx + 1}`} fill className="object-cover" />
-            </div>
-          ))}
+        <div className="mt-12">
+          <h2 className="text-2xl font-black mb-6">Experience {app.name}</h2>
+          <div className="overflow-x-auto no-scrollbar flex gap-6 pb-4">
+            {app.screenshots.map((ss, idx) => (
+              <div key={idx} className="relative h-[480px] w-[270px] rounded-[2rem] overflow-hidden shadow-lg flex-shrink-0 border-4 border-card">
+                <Image src={ss} alt={`Screenshot ${idx + 1}`} fill className="object-cover" />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* About this app */}
-        <div className="mt-12 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold tracking-tight">About this app</h2>
-            <ChevronRight className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div className="relative">
-             <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-              {app.description}
-            </p>
+        {/* Info Tabs / Grid */}
+        <div className="mt-12 grid gap-12 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-8">
+            <section className="space-y-4">
+              <h2 className="text-2xl font-black flex items-center gap-2">
+                <Info className="h-5 w-5 text-primary" /> About this App
+              </h2>
+              <p className="text-muted-foreground leading-relaxed font-medium whitespace-pre-wrap text-lg">
+                {app.description}
+              </p>
+            </section>
+
+            <section className="p-8 rounded-[2.5rem] bg-primary/5 border border-primary/10">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+                  <ShieldCheck className="h-7 w-7" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black">Verified Security Scan</h3>
+                  <p className="text-muted-foreground font-medium mt-1">
+                    This file was scanned by our automated security system on {app.lastUpdated}. No threats detected. Signature verified.
+                  </p>
+                </div>
+              </div>
+            </section>
           </div>
 
-          <div className="rounded-2xl bg-secondary/30 p-6 border border-primary/10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <Info className="h-4 w-4" />
-                 </div>
-                 <h3 className="font-bold text-lg">AI Smart Summary</h3>
+          <aside className="space-y-8">
+            <div className="p-6 rounded-[2.5rem] bg-card border border-border/50 space-y-6">
+              <h3 className="text-xl font-black">Technical Specs</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-2 border-b border-border/30">
+                  <span className="text-muted-foreground font-bold text-sm uppercase">Version</span>
+                  <span className="font-black">{app.version}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border/30">
+                  <span className="text-muted-foreground font-bold text-sm uppercase">Updated</span>
+                  <span className="font-black">{app.lastUpdated}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border/30">
+                  <span className="text-muted-foreground font-bold text-sm uppercase">Required</span>
+                  <span className="font-black">Android 8.0+</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-muted-foreground font-bold text-sm uppercase">Size</span>
+                  <span className="font-black">{app.size}</span>
+                </div>
               </div>
-              <Button 
-                onClick={handleSummarize} 
-                disabled={isSummarizing}
-                size="sm" 
-                variant="outline" 
-                className="rounded-full bg-background/50 border-primary/20 text-primary"
-              >
-                {isSummarizing ? "Analyzing..." : "Regenerate"}
+              <Button variant="secondary" className="w-full rounded-xl font-bold gap-2">
+                <History className="h-4 w-4" /> View History
               </Button>
             </div>
-            
-            {!summary && !isSummarizing ? (
-              <p className="text-sm text-muted-foreground italic">Click the button to get a concise, AI-powered summary of this app's features.</p>
-            ) : isSummarizing ? (
-              <div className="space-y-2">
-                <div className="h-3 bg-muted animate-pulse rounded w-3/4" />
-                <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
-                <div className="h-3 bg-muted animate-pulse rounded w-2/3" />
-              </div>
-            ) : (
-              <div className="text-sm text-foreground prose-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: summary.replace(/\n/g, '<br/>') }} />
-            )}
-          </div>
-        </div>
 
-        {/* Security Info */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-           <div className="flex gap-4 p-4 rounded-2xl bg-muted/50 border border-border">
-              <ShieldCheck className="h-6 w-6 text-primary flex-shrink-0" />
-              <div>
-                <h4 className="font-bold">Verified Safe</h4>
-                <p className="text-sm text-muted-foreground mt-1">This APK has been scanned by our security engine and is 100% safe.</p>
-              </div>
-           </div>
-           <div className="flex gap-4 p-4 rounded-2xl bg-muted/50 border border-border">
-              <History className="h-6 w-6 text-primary flex-shrink-0" />
-              <div>
-                <h4 className="font-bold">Version History</h4>
-                <p className="text-sm text-muted-foreground mt-1">View previous versions and changelogs for this application.</p>
-              </div>
-           </div>
-        </div>
-
-        {/* Technical Info */}
-        <div className="mt-12 space-y-6 pt-12 border-t">
-          <h2 className="text-xl font-bold tracking-tight">Technical Information</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-             <div>
-               <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest mb-1">Version</p>
-               <p className="font-medium">{app.version}</p>
-             </div>
-             <div>
-               <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest mb-1">Updated on</p>
-               <p className="font-medium">{app.lastUpdated}</p>
-             </div>
-             <div>
-               <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest mb-1">Requires Android</p>
-               <p className="font-medium">8.0 and up</p>
-             </div>
-             <div>
-               <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest mb-1">Package Name</p>
-               <p className="font-medium truncate text-xs">com.notion.app</p>
-             </div>
-          </div>
+            <div className="p-6 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 text-primary-foreground space-y-4">
+              <h3 className="text-xl font-black">Join PLKAPK</h3>
+              <p className="font-medium opacity-90 text-sm">
+                Get notified whenever {app.name} receives an update.
+              </p>
+              <Button variant="secondary" className="w-full rounded-xl font-bold bg-white text-primary hover:bg-white/90">
+                Subscribe Updates
+              </Button>
+            </div>
+          </aside>
         </div>
       </main>
     </div>

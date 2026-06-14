@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Abstract technological background",
+      "imageUrl": "https://picsum.photos/seed/plkhub-hero/1200/600",
+      "imageHint": "technology abstract"
+    },
+    {
+      "id": "app-icon-1",
+      "description": "Social media app icon",
+      "imageUrl": "https://picsum.photos/seed/plk-app1/256/256",
+      "imageHint": "social network"
+    },
+    {
+      "id": "app-icon-2",
+      "description": "Gaming app icon",
+      "imageUrl": "https://picsum.photos/seed/plk-app2/256/256",
+      "imageHint": "gaming controller"
+    },
+    {
+      "id": "app-icon-3",
+      "description": "Productivity app icon",
+      "imageUrl": "https://picsum.photos/seed/plk-app3/256/256",
+      "imageHint": "calendar check"
+    },
+    {
+      "id": "app-icon-4",
+      "description": "Photography app icon",
+      "imageUrl": "https://picsum.photos/seed/plk-app4/256/256",
+      "imageHint": "camera lens"
+    },
+    {
+      "id": "screenshot-1",
+      "description": "App screenshot 1",
+      "imageUrl": "https://picsum.photos/seed/plk-ss1/720/1280",
+      "imageHint": "mobile ui"
+    },
+    {
+      "id": "screenshot-2",
+      "description": "App screenshot 2",
+      "imageUrl": "https://picsum.photos/seed/plk-ss2/720/1280",
+      "imageHint": "mobile interface"
+    },
+    {
+      "id": "screenshot-3",
+      "description": "App screenshot 3",
+      "imageUrl": "https://picsum.photos/seed/plk-ss3/720/1280",
+      "imageHint": "app dashboard"
+    }
+  ]
 }
