@@ -31,11 +31,8 @@ export function BottomNavigation() {
     };
   }, []);
 
-  const handleLongPressStart = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleLongPressStart = () => {
     timerRef.current = setTimeout(() => {
-      console.log("[BottomNav] 3s Long Press Reached - Admin Mode Activated");
-      toast({ title: "Admin Mode Activated", duration: 2000 });
-      
       const pin = window.prompt("Enter Security PIN");
       if (pin === "7227") {
         router.push("/auth/login?admin=true");

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {Button} from '@/components/ui/button';
@@ -27,12 +28,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (isAdminRequest) {
-        if (email !== 'shanpalia786@gmail.com' || password !== 'hafsa@1#HASAN') {
-          throw new Error('Invalid Admin Credentials');
-        }
-      }
-
       const {data, error} = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -40,12 +35,22 @@ export default function LoginPage() {
 
       if (error) throw error;
 
+      if (isAdminRequest) {
+        if (data.user?.email !== 'shanpalia786@gmail.com') {
+          // Sign out immediately if they are not the admin but trying to access admin
+          await supabase.auth.signOut();
+          throw new Error('Invalid Admin Credentials');
+        }
+        toast({title: 'Admin signed in successfully'});
+        router.push('/admin/dashboard');
+        return;
+      }
+
       toast({title: 'Signed in successfully'});
 
-      if (isAdminRequest || data.user?.email === 'shanpalia786@gmail.com') {
+      if (data.user?.email === 'shanpalia786@gmail.com') {
         router.push('/admin/dashboard');
       } else if (returnTo) {
-        // Construct clean redirect URL
         const redirectUrl = action ? `${returnTo}?action=${action}` : returnTo;
         router.push(redirectUrl);
       } else {
