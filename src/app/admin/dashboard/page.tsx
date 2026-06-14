@@ -306,7 +306,7 @@ export default function AdminDashboard() {
                          </div>
                          <div className="flex flex-col">
                            <span className="font-black text-base">{app.app_name}</span>
-                           <span className="text-[10px] text-muted-foreground font-bold uppercase">ID: {app.id.slice(0, 8)}</span>
+                           <span className="text-[10px] text-muted-foreground font-bold uppercase">ID: {String(app.id).slice(0, 8)}</span>
                          </div>
                       </div>
                     </TableCell>
