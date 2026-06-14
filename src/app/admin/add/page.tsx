@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -124,7 +123,8 @@ export default function AddAppPage() {
       setUploadProgress(30);
 
       // 2. Upload APK
-      const apkExt = apkFile!.name.split('.').pop();
+      const apkOriginalName = apkFile!.name;
+      const apkExt = apkOriginalName.split('.').pop();
       const apkPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${apkExt}`;
       const { data: apkData, error: apkError } = await supabase.storage.from('apk-files').upload(apkPath, apkFile!);
       
@@ -155,6 +155,7 @@ export default function AddAppPage() {
         icon_url: iconUrl,
         version: formData.version,
         apk_url: apkUrl,
+        apk_file_name: apkOriginalName,
         screenshot_url: screenshotUrl,
         downloads: 0,
         created_at: new Date().toISOString()
@@ -236,7 +237,7 @@ export default function AddAppPage() {
                 <div className={`p-4 rounded-2xl ${apkFile ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                   <FileArchive className="h-10 w-10 group-hover:scale-110 transition-transform" />
                 </div>
-                <span className="text-xs font-bold mt-4 text-center">{apkFile ? "APK Selected" : "Click to Browse APK"}</span>
+                <span className="text-xs font-bold mt-4 text-center">{apkFile ? apkFile.name : "Click to Browse APK"}</span>
                 <input 
                   type="file" 
                   ref={apkInputRef}

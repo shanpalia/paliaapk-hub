@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -33,6 +32,7 @@ export default function EditAppPage() {
     category: "General",
     icon_url: "",
     apk_url: "",
+    apk_file_name: "",
     screenshot_url: ""
   });
 
@@ -78,6 +78,7 @@ export default function EditAppPage() {
             category: data.category || "General",
             icon_url: data.icon_url,
             apk_url: data.apk_url,
+            apk_file_name: data.apk_file_name || "",
             screenshot_url: data.screenshot_url || ""
           });
           setImagePreview(data.icon_url);
@@ -151,6 +152,7 @@ export default function EditAppPage() {
     try {
       let icon_url = formData.icon_url;
       let apkUrl = formData.apk_url;
+      let apkFileName = formData.apk_file_name;
       let screenshotUrl = formData.screenshot_url;
 
       // Handle Icon Update
@@ -166,7 +168,8 @@ export default function EditAppPage() {
 
       // Handle APK Update
       if (apkFile) {
-        const ext = apkFile.name.split('.').pop();
+        apkFileName = apkFile.name;
+        const ext = apkFileName.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
         const { error } = await supabase.storage.from('apk-files').upload(path, apkFile);
         if (error) throw error;
@@ -193,6 +196,7 @@ export default function EditAppPage() {
         icon_url: icon_url,
         version: formData.version,
         apk_url: apkUrl,
+        apk_file_name: apkFileName,
         screenshot_url: screenshotUrl
       }).eq('id', id);
 
@@ -275,7 +279,7 @@ export default function EditAppPage() {
                   <FileArchive className="h-12 w-12 group-hover:scale-110 transition-transform" />
                 </div>
                 <span className="text-xs font-black mt-4 text-center uppercase text-muted-foreground">
-                  {apkFile ? "New APK Ready" : "Replace APK File"}
+                  {apkFile ? apkFile.name : (formData.apk_file_name || "Replace APK File")}
                 </span>
                 <input type="file" ref={apkInputRef} accept=".apk" className="hidden" onChange={(e) => setApkFile(e.target.files?.[0] || null)} />
               </div>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {Navigation} from '@/components/Navigation';
@@ -108,7 +107,8 @@ export default function AppDetailsPage() {
 
           const link = document.createElement('a');
           link.href = app.apk_url;
-          link.download = `${app.app_name}.apk`;
+          // Use the stored friendly name or fallback to app name
+          link.download = app.apk_file_name || `${app.app_name}.apk`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);

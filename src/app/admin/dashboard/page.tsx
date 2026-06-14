@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Navigation } from "@/components/Navigation";
@@ -366,7 +365,9 @@ export default function AdminDashboard() {
                          </div>
                          <div className="flex flex-col">
                            <span className="font-black text-lg line-clamp-1">{app.app_name}</span>
-                           <span className="text-[10px] text-muted-foreground font-bold uppercase">UID: {String(app.id).slice(0, 8)}</span>
+                           <span className="text-[10px] text-muted-foreground font-bold uppercase truncate max-w-[150px]">
+                             FILE: {app.apk_file_name || String(app.id).slice(0, 8)}
+                           </span>
                          </div>
                       </div>
                     </TableCell>
