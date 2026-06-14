@@ -83,17 +83,10 @@ export function Navigation() {
       console.log("PIN Correct");
       toast({ title: "Admin Mode Activated" });
       setIsPinDialogOpen(false);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const isAdminLoggedIn = session?.user?.email === "shanpalia786@gmail.com";
-
-      if (isAdminLoggedIn) {
-        toast({ title: "Opening Admin Dashboard" });
-        router.push("/admin/dashboard");
-      } else {
-        toast({ title: "Administrative Authentication Required" });
-        router.push("/auth/login?admin=true");
-      }
+      
+      console.log("Redirecting to Admin Login for mandatory verification");
+      toast({ title: "Administrative Authentication Required" });
+      router.push("/auth/login?admin=true");
     } else {
       console.log("PIN Incorrect");
       toast({ 
@@ -172,7 +165,6 @@ export function Navigation() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Separate User vs Admin UI */}
               {user && !isAdmin ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

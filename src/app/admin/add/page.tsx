@@ -47,7 +47,7 @@ export default function AddAppPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || session.user.email !== "shanpalia786@gmail.com") {
         toast({ variant: "destructive", title: "Access Denied", description: "Admin authentication required." });
-        router.push("/auth/login?admin=true");
+        router.push("/");
       } else {
         setCheckingAuth(false);
       }
