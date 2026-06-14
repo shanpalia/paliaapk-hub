@@ -47,6 +47,7 @@ export function Navigation() {
   }, []);
 
   const handleAdminTrigger = (e: React.MouseEvent) => {
+    // Reset timer on every click
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
       setAdminClickCount(0);
@@ -130,12 +131,20 @@ export function Navigation() {
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-4">
-          <div className="hidden w-full max-w-xs md:flex relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search apps..."
-              className="pl-10 h-10 bg-muted/30 border-none rounded-full font-medium"
-            />
+          <div className="hidden w-full max-w-xs md:flex items-center gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-muted-foreground hover:text-primary">
+                <Home className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search apps..."
+                className="pl-10 h-10 bg-muted/30 border-none rounded-full font-medium"
+                onFocus={() => router.push("/search")}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -177,7 +186,7 @@ export function Navigation() {
                         <DropdownMenuSeparator className="my-2" />
                         <Link href="/admin/dashboard">
                           <DropdownMenuItem className="rounded-xl cursor-pointer font-black text-primary px-4 py-2.5 bg-primary/5">
-                            <Settings className="mr-3 h-5 w-5" /> Admin Panel
+                            <Settings className="mr-3 h-5 w-5" /> Admin Console
                           </DropdownMenuItem>
                         </Link>
                       </>

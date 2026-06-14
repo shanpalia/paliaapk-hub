@@ -19,7 +19,8 @@ import {
   Eye,
   Home,
   ArrowUpDown,
-  RefreshCcw
+  RefreshCcw,
+  Filter
 } from "lucide-react";
 import { 
   Table, 
@@ -45,15 +46,17 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+const CATEGORIES = ["Social", "Games", "Productivity", "Photography", "Tools", "Education", "Entertainment", "General"];
+
 export default function AdminDashboard() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isInvalidKey, setIsInvalidKey] = useState(false);
   
-  // Search & Sort State
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
   const router = useRouter();
@@ -73,7 +76,7 @@ export default function AdminDashboard() {
       }
       setApps(data || []);
     } catch (err: any) {
-      setError(err.message);
+      console.error("Fetch Error:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -90,33 +93,23 @@ export default function AdminDashboard() {
       try {
         const { data: { session }, error: authError } = await supabase.auth.getSession();
         
-        if (authError) {
-          if (authError.message === "Invalid API key") setIsInvalidKey(true);
-          throw authError;
-        }
-
-        if (!session || session.user.email !== "shanpalia786@gmail.com") {
-          toast({ 
-            variant: "destructive", 
-            title: "Access Denied", 
-            description: "Unauthorized access." 
-          });
-          router.push("/auth/login");
+        if (authError || !session || session.user.email !== "shanpalia786@gmail.com") {
+          router.push("/auth/login?admin=true");
           return;
         }
         
         fetchApps();
       } catch (err: any) {
         setLoading(false);
-        router.push("/auth/login");
+        router.push("/auth/login?admin=true");
       }
     };
 
     checkAuth();
-  }, [router, toast]);
+  }, [router]);
 
   const extractPathFromUrl = (url: string, bucket: string) => {
-    if (!url) return null;
+    if (!url || !url.includes(`${bucket}/`)) return null;
     const parts = url.split(`${bucket}/`);
     return parts.length > 1 ? parts[1] : null;
   };
@@ -130,15 +123,20 @@ export default function AdminDashboard() {
       const apkPath = extractPathFromUrl(app.apk_url, 'apk-files');
       const ssPath = extractPathFromUrl(app.screenshot_url || '', 'screenshots');
 
-      if (iconPath) await supabase.storage.from('app-icons').remove([iconPath]);
-      if (apkPath) await supabase.storage.from('apk-files').remove([apkPath]);
-      if (ssPath) await supabase.storage.from('screenshots').remove([ssPath]);
+      // 1. Storage Cleanup
+      const cleanupPromises = [];
+      if (iconPath) cleanupPromises.push(supabase.storage.from('app-icons').remove([iconPath]));
+      if (apkPath) cleanupPromises.push(supabase.storage.from('apk-files').remove([apkPath]));
+      if (ssPath) cleanupPromises.push(supabase.storage.from('screenshots').remove([ssPath]));
+      
+      await Promise.all(cleanupPromises);
 
+      // 2. Database Cleanup
       const { error } = await supabase.from('apps').delete().eq('id', app.id);
       if (error) throw error;
       
       setApps(apps.filter(a => a.id !== app.id));
-      toast({ title: "App Deleted Successfully" });
+      toast({ title: "App Deleted Successfully", description: `${app.app_name} has been removed from the repository.` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Deletion Failed", description: err.message });
     }
@@ -146,10 +144,11 @@ export default function AdminDashboard() {
 
   // Filtered and Sorted Inventory
   const filteredApps = useMemo(() => {
-    let result = apps.filter(app => 
-      app.app_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    let result = apps.filter(app => {
+      const matchesSearch = app.app_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || app.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
 
     switch (sortBy) {
       case "downloads":
@@ -160,7 +159,7 @@ export default function AdminDashboard() {
       default:
         return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
-  }, [apps, searchQuery, sortBy]);
+  }, [apps, searchQuery, categoryFilter, sortBy]);
 
   const showConfigAlert = !isSupabaseConfigured || isInvalidKey;
   const totalDownloads = apps.reduce((sum, app) => sum + (app.downloads || 0), 0);
@@ -197,15 +196,15 @@ export default function AdminDashboard() {
         {/* Console Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Link href="/">
-                <Button variant="outline" size="sm" className="rounded-full font-bold h-9 gap-2">
-                  <Home className="h-4 w-4" /> Go to Store
+                <Button variant="outline" size="sm" className="rounded-full font-bold h-10 gap-2 border-primary/20 hover:bg-primary/5">
+                  <Home className="h-4 w-4" /> Back to Store
                 </Button>
               </Link>
             </div>
-            <h1 className="text-4xl font-black tracking-tight mt-2">Console Dashboard</h1>
-            <p className="text-muted-foreground font-medium">Manage repository assets and monitor performance charts.</p>
+            <h1 className="text-4xl font-black tracking-tight mt-4">Management Console</h1>
+            <p className="text-muted-foreground font-medium">Control center for marketplace applications and analytics.</p>
           </div>
           
           <div className="flex flex-wrap gap-3">
@@ -218,8 +217,8 @@ export default function AdminDashboard() {
               <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
             </Button>
             <Link href="/admin/add">
-              <Button disabled={showConfigAlert} className="rounded-xl font-bold h-12 px-6 shadow-lg shadow-primary/20">
-                <Plus className="mr-2 h-5 w-5" /> Upload New App
+              <Button disabled={showConfigAlert} className="rounded-xl font-bold h-12 px-6 shadow-xl shadow-primary/20">
+                <Plus className="mr-2 h-5 w-5" /> Publish New App
               </Button>
             </Link>
           </div>
@@ -228,7 +227,7 @@ export default function AdminDashboard() {
         {/* Stats Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, idx) => (
-            <Card key={idx} className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+            <Card key={idx} className="border-none shadow-sm rounded-[2.5rem] overflow-hidden bg-white">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -247,26 +246,40 @@ export default function AdminDashboard() {
         {/* Inventory Section */}
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <h2 className="text-2xl font-black tracking-tight w-full">Inventory Management</h2>
-            <div className="flex items-center gap-4 w-full justify-end">
-              <div className="relative w-full max-w-sm">
+            <h2 className="text-2xl font-black tracking-tight w-full">Inventory Catalog</h2>
+            <div className="flex flex-wrap items-center gap-3 w-full justify-end">
+              <div className="relative w-full max-w-xs">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input 
-                  placeholder="Search catalog..." 
+                  placeholder="Search by name..." 
                   className="pl-11 rounded-xl bg-white h-12 font-medium border-none shadow-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] h-12 rounded-xl bg-white border-none shadow-sm font-bold">
-                  <ArrowUpDown className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Sort By" />
+
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[160px] h-12 rounded-xl bg-white border-none shadow-sm font-bold">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  <SelectItem value="latest">Latest Uploads</SelectItem>
-                  <SelectItem value="downloads">Top Downloads</SelectItem>
-                  <SelectItem value="name">Alphabetical</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[160px] h-12 rounded-xl bg-white border-none shadow-sm font-bold">
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="latest">Latest</SelectItem>
+                  <SelectItem value="downloads">Popularity</SelectItem>
+                  <SelectItem value="name">A-Z</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -276,12 +289,12 @@ export default function AdminDashboard() {
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="font-black h-14">Application</TableHead>
+                  <TableHead className="font-black h-14 pl-8">Application</TableHead>
                   <TableHead className="font-black">Version</TableHead>
                   <TableHead className="font-black">Category</TableHead>
                   <TableHead className="font-black">Downloads</TableHead>
-                  <TableHead className="font-black">Uploaded On</TableHead>
-                  <TableHead className="text-right font-black">Actions</TableHead>
+                  <TableHead className="font-black">Created</TableHead>
+                  <TableHead className="text-right font-black pr-8">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -294,7 +307,7 @@ export default function AdminDashboard() {
                   </TableRow>
                 ) : filteredApps.map((app) => (
                   <TableRow key={app.id} className="border-border group transition-colors">
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium pl-8">
                       <div className="flex items-center gap-4">
                          <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted border border-border/50 relative shrink-0">
                             <Image 
@@ -305,7 +318,7 @@ export default function AdminDashboard() {
                             />
                          </div>
                          <div className="flex flex-col">
-                           <span className="font-black text-base">{app.app_name}</span>
+                           <span className="font-black text-base line-clamp-1">{app.app_name}</span>
                            <span className="text-[10px] text-muted-foreground font-bold uppercase">ID: {String(app.id).slice(0, 8)}</span>
                          </div>
                       </div>
@@ -318,21 +331,21 @@ export default function AdminDashboard() {
                     </TableCell>
                     <TableCell className="font-black text-lg">{app.downloads.toLocaleString()}</TableCell>
                     <TableCell className="text-muted-foreground text-sm font-medium">
-                      {new Date(app.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                      {new Date(app.created_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                    <TableCell className="text-right pr-8">
+                      <div className="flex justify-end gap-2">
                          <Link href={`/apps/${app.id}`}>
-                           <Button variant="ghost" size="icon" title="View Store Page" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/5">
+                           <Button variant="ghost" size="icon" title="View in Store" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/5">
                               <Eye className="h-5 w-5" />
                            </Button>
                          </Link>
                          <Link href={`/admin/edit/${app.id}`}>
-                           <Button variant="ghost" size="icon" title="Edit App" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted">
+                           <Button variant="ghost" size="icon" title="Edit Properties" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted">
                               <Edit className="h-5 w-5" />
                            </Button>
                          </Link>
-                         <Button onClick={() => handleDelete(app)} variant="ghost" size="icon" title="Delete App" className="h-10 w-10 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/5">
+                         <Button onClick={() => handleDelete(app)} variant="ghost" size="icon" title="Remove App" className="h-10 w-10 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/5">
                             <Trash2 className="h-5 w-5" />
                          </Button>
                       </div>
@@ -344,15 +357,6 @@ export default function AdminDashboard() {
           </Card>
         </div>
       </main>
-
-      {/* Mobile Floating Home */}
-      <div className="fixed bottom-24 right-6 lg:hidden z-40">
-        <Link href="/">
-          <Button size="icon" className="h-14 w-14 rounded-full shadow-2xl shadow-primary/40">
-            <Home className="h-6 w-6" />
-          </Button>
-        </Link>
-      </div>
     </div>
   );
 }
