@@ -11,12 +11,19 @@ const archiver = require('archiver');
 async function exportProject() {
   const zipPath = path.join(process.cwd(), 'plkapk-hub-export.zip');
   
-  // Pre-verification
+  // Pre-verification check
   const androidPath = path.join(process.cwd(), 'android');
   const hasAndroid = fs.existsSync(androidPath);
   
-  console.log('Starting export process...');
+  console.log('----------------------------------------');
+  console.log('STARTING PROJECT EXPORT');
+  console.log('----------------------------------------');
   console.log(`Verifying source: Android folder is ${hasAndroid ? 'PRESENT' : 'MISSING'}`);
+  
+  if (!hasAndroid) {
+    console.warn('WARNING: The "android" folder was not found in the root directory.');
+    console.warn('It will be missing from the final ZIP unless created first.');
+  }
 
   const output = fs.createWriteStream(zipPath);
   const archive = archiver('zip', {
@@ -49,7 +56,7 @@ async function exportProject() {
 
   archive.pipe(output);
 
-  // 1. Add essential root files
+  // 1. Add essential root files individually
   const rootFiles = [
     'package.json',
     'package-lock.json',
@@ -67,7 +74,8 @@ async function exportProject() {
   rootFiles.forEach(file => {
     const fullPath = path.join(process.cwd(), file);
     if (fs.existsSync(fullPath)) {
-      archive.file(file, { name: file });
+      console.log(`Adding file: ${file}`);
+      archive.file(fullPath, { name: file });
     }
   });
 
@@ -75,7 +83,7 @@ async function exportProject() {
   const directories = [
     'src',
     'public',
-    'android', // Explicitly include the entire android native project
+    'android', // Explicitly including the android native project
     'docs',
     'scripts'
   ];
@@ -83,15 +91,15 @@ async function exportProject() {
   directories.forEach(dir => {
     const fullPath = path.join(process.cwd(), dir);
     if (fs.existsSync(fullPath)) {
-      console.log(`Adding directory: ${dir}...`);
+      console.log(`Adding directory: ${dir}/**`);
       // Ensure the directory is added with its name to the zip root
       archive.directory(fullPath + '/', dir);
     } else {
-      console.warn(`Warning: Skipped directory "${dir}" because it does not exist.`);
+      console.warn(`Skipping directory: ${dir} (Not found)`);
     }
   });
 
-  console.log('Compressing project files (this may take a moment)...');
+  console.log('\nFinalizing archive...');
   await archive.finalize();
 }
 
