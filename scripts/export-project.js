@@ -1,7 +1,8 @@
 
 /**
  * @fileOverview Node.js project exporter using archiver.
- * This script bundles the PLKAPK Hub source code into a ZIP file and places it in the root folder for easy download via the IDE sidebar.
+ * This script bundles the PLKAPK Hub source code (including Android native project) 
+ * into a ZIP file and places it in the root folder for easy download.
  */
 const fs = require('fs');
 const path = require('path');
@@ -16,8 +17,9 @@ async function exportProject() {
 
   output.on('close', function() {
     console.log('\n----------------------------------------');
-    console.log('SUCCESS: Project Exported');
+    console.log('SUCCESS: Project Exported with Android Assets');
     console.log('File: ' + zipPath);
+    console.log('Size: ' + (archive.pointer() / 1024 / 1024).toFixed(2) + ' MB');
     console.log('\nTO DOWNLOAD TO YOUR COMPUTER:');
     console.log('1. Find "plkapk-hub-export.zip" in the left sidebar (File Explorer).');
     console.log('2. Right-click the file and select "Download".');
@@ -39,20 +41,46 @@ async function exportProject() {
 
   archive.pipe(output);
 
-  // Glob patterns to include/exclude
-  archive.glob('**/*', {
-    ignore: [
-      'node_modules/**',
-      '.next/**',
-      'out/**',
-      '.git/**',
-      'plkapk-hub-export.zip', // Don't include the zip itself
-      '**/.DS_Store'
-    ],
-    dot: true // Include hidden files
+  // 1. Add essential root files
+  const rootFiles = [
+    'package.json',
+    'package-lock.json',
+    'capacitor.config.ts',
+    'next.config.ts',
+    'tailwind.config.ts',
+    'tsconfig.json',
+    'apphosting.yaml',
+    'components.json',
+    'README.md',
+    '.env',
+    'dev.nix'
+  ];
+
+  rootFiles.forEach(file => {
+    const fullPath = path.join(process.cwd(), file);
+    if (fs.existsSync(fullPath)) {
+      archive.file(file, { name: file });
+    }
   });
 
-  console.log('Compressing project files...');
+  // 2. Add source and configuration directories
+  const directories = [
+    'src',
+    'public',
+    'android', // Explicitly include the entire android native project
+    'docs',
+    'scripts'
+  ];
+
+  directories.forEach(dir => {
+    const fullPath = path.join(process.cwd(), dir);
+    if (fs.existsSync(fullPath)) {
+      console.log(`Adding directory: ${dir}...`);
+      archive.directory(dir + '/', dir);
+    }
+  });
+
+  console.log('Compressing project files (this may take a moment)...');
   await archive.finalize();
 }
 
