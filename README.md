@@ -17,6 +17,19 @@ The ultimate, secure Android application marketplace. Built with Next.js, Capaci
 - **Native**: Capacitor 6
 - **AI**: Genkit + Google Gemini 2.5 Flash
 
+## 📥 How to Download the Project ZIP
+
+To download the complete source code to your local computer:
+
+1. **Run the Export Script**:
+   ```bash
+   npm run export:project
+   ```
+2. **Download from Sidebar**:
+   - Locate **`plkapk-hub-export.zip`** in the **File Explorer** (the left sidebar of this IDE).
+   - **Right-click** the file.
+   - Select **'Download'** from the context menu.
+
 ## 🚀 Getting Started
 
 ### 1. Installation

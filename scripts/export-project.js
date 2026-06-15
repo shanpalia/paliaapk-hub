@@ -1,20 +1,14 @@
 
 /**
  * @fileOverview Node.js project exporter using archiver.
- * This script bundles the PLKAPK Hub source code into a ZIP file and places it in the public folder for easy download.
+ * This script bundles the PLKAPK Hub source code into a ZIP file and places it in the root folder for easy download via the IDE sidebar.
  */
 const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
 
 async function exportProject() {
-  // Save to public folder so it can be downloaded via the web server
-  const publicDir = path.join(process.cwd(), 'public');
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir);
-  }
-  
-  const zipPath = path.join(publicDir, 'plkapk-hub-export.zip');
+  const zipPath = path.join(process.cwd(), 'plkapk-hub-export.zip');
   const output = fs.createWriteStream(zipPath);
   const archive = archiver('zip', {
     zlib: { level: 9 } // Maximum compression
@@ -22,10 +16,11 @@ async function exportProject() {
 
   output.on('close', function() {
     console.log('\n----------------------------------------');
-    console.log('SUCCESS: Project Exported to Public Folder');
+    console.log('SUCCESS: Project Exported');
     console.log('File: ' + zipPath);
-    console.log('Download Link: http://localhost:9002/plkapk-hub-export.zip');
-    console.log('Size: ' + (archive.pointer() / 1024 / 1024).toFixed(2) + ' MB');
+    console.log('\nTO DOWNLOAD TO YOUR COMPUTER:');
+    console.log('1. Find "plkapk-hub-export.zip" in the left sidebar (File Explorer).');
+    console.log('2. Right-click the file and select "Download".');
     console.log('----------------------------------------\n');
   });
 
@@ -51,7 +46,7 @@ async function exportProject() {
       '.next/**',
       'out/**',
       '.git/**',
-      'public/plkapk-hub-export.zip', // Don't include the zip itself
+      'plkapk-hub-export.zip', // Don't include the zip itself
       '**/.DS_Store'
     ],
     dot: true // Include hidden files
