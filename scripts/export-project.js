@@ -10,6 +10,14 @@ const archiver = require('archiver');
 
 async function exportProject() {
   const zipPath = path.join(process.cwd(), 'plkapk-hub-export.zip');
+  
+  // Pre-verification
+  const androidPath = path.join(process.cwd(), 'android');
+  const hasAndroid = fs.existsSync(androidPath);
+  
+  console.log('Starting export process...');
+  console.log(`Verifying source: Android folder is ${hasAndroid ? 'PRESENT' : 'MISSING'}`);
+
   const output = fs.createWriteStream(zipPath);
   const archive = archiver('zip', {
     zlib: { level: 9 } // Maximum compression
@@ -17,7 +25,7 @@ async function exportProject() {
 
   output.on('close', function() {
     console.log('\n----------------------------------------');
-    console.log('SUCCESS: Project Exported with Android Assets');
+    console.log('SUCCESS: Project Exported');
     console.log('File: ' + zipPath);
     console.log('Size: ' + (archive.pointer() / 1024 / 1024).toFixed(2) + ' MB');
     console.log('\nTO DOWNLOAD TO YOUR COMPUTER:');
@@ -76,7 +84,10 @@ async function exportProject() {
     const fullPath = path.join(process.cwd(), dir);
     if (fs.existsSync(fullPath)) {
       console.log(`Adding directory: ${dir}...`);
-      archive.directory(dir + '/', dir);
+      // Ensure the directory is added with its name to the zip root
+      archive.directory(fullPath + '/', dir);
+    } else {
+      console.warn(`Warning: Skipped directory "${dir}" because it does not exist.`);
     }
   });
 
