@@ -1,3 +1,4 @@
+
 'use client';
 
 import {Navigation} from '@/components/Navigation';
@@ -116,7 +117,6 @@ function AppDetailsContent() {
     if (id) fetchApp();
   }, [id]);
 
-  // Handle automatic download if triggered by returnTo
   useEffect(() => {
     if (app && session && searchParams.get('action') === 'download' && !loading) {
        handleDownload(app);
@@ -142,8 +142,6 @@ function AppDetailsContent() {
     );
   }
 
-  const displayIcon = app.icon_url || `https://placehold.co/400x400/10b981/ffffff?text=${encodeURIComponent(app.app_name || 'App')}`;
-
   return (
     <main className="container mx-auto px-4 max-w-5xl py-8">
       <Link
@@ -151,7 +149,7 @@ function AppDetailsContent() {
         className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-primary mb-8 transition-colors group"
       >
         <ChevronLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-1" />{' '}
-        Back to Marketplace
+        Back to Hub
       </Link>
 
       <div className="bg-card rounded-[3rem] p-6 md:p-12 border border-border/50 shadow-sm relative overflow-hidden">
@@ -160,7 +158,7 @@ function AppDetailsContent() {
         <div className="flex flex-col md:flex-row gap-10 relative z-10 items-center md:items-start">
           <div className="h-40 w-40 md:h-56 md:w-56 rounded-[3rem] shadow-2xl shadow-primary/20 overflow-hidden bg-white border-8 border-white flex-shrink-0 relative">
             <Image
-              src={displayIcon}
+              src={app.icon_url}
               alt={app.app_name}
               fill
               className="object-cover h-full w-full"
@@ -172,10 +170,10 @@ function AppDetailsContent() {
             <div className="space-y-4">
               <div className="flex flex-wrap justify-center md:justify-start gap-2">
                 <Badge className="bg-primary/10 text-primary border-none px-4 py-1.5 font-black uppercase tracking-widest text-[10px]">
-                  {app.category || 'General'}
+                  {app.category}
                 </Badge>
                 <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-100">
-                  <CheckCircle2 className="h-3 w-3" /> Verified
+                  <ShieldCheck className="h-3 w-3" /> Verified
                 </div>
               </div>
 
@@ -183,14 +181,14 @@ function AppDetailsContent() {
                 {app.app_name}
               </h1>
               <p className="text-muted-foreground font-medium text-lg">
-                Official APK Release • Version {app.version}
+                Official Release • v{app.version} • {app.developer}
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-8 py-6 border-y border-border/50">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1.5 font-black text-2xl">
-                  4.8 <Star className="h-5 w-5 fill-primary text-primary" />
+                  4.9 <Star className="h-5 w-5 fill-primary text-primary" />
                 </div>
                 <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
                   Rating
@@ -198,16 +196,16 @@ function AppDetailsContent() {
               </div>
               <div className="text-center border-x border-border/50">
                 <div className="font-black text-2xl">
-                  {app.downloads.toLocaleString()}
+                  {app.downloads?.toLocaleString() || 0}
                 </div>
                 <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                  Downloads
+                  Transfers
                 </p>
               </div>
               <div className="text-center">
                 <div className="font-black text-2xl">APK</div>
                 <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                  File Type
+                  Format
                 </p>
               </div>
             </div>
@@ -217,30 +215,19 @@ function AppDetailsContent() {
                 <Button
                   onClick={() => handleDownload(app)}
                   size="lg"
-                  className="flex-1 rounded-2xl h-20 text-2xl font-black shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
+                  className="flex-1 rounded-2xl h-20 text-2xl font-black shadow-2xl shadow-primary/30"
                 >
-                  {session ? (
-                    <>
-                      <Download className="mr-3 h-8 w-8" /> Download APK
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="mr-3 h-8 w-8" /> Login to Download
-                    </>
-                  )}
+                  {session ? <><Download className="mr-3 h-8 w-8" /> Download APK</> : <><Lock className="mr-3 h-8 w-8" /> Login to Download</>}
                 </Button>
               ) : (
-                <div className="flex-1 bg-muted/50 p-6 rounded-[2rem] border border-primary/10 backdrop-blur-sm">
+                <div className="flex-1 bg-muted/50 p-6 rounded-[2rem] border border-primary/10">
                   <div className="flex justify-between text-sm font-black mb-3 px-1">
                     <span className="text-primary uppercase tracking-widest animate-pulse">
-                      Securing Server Node...
+                      Initializing Binary Transfer...
                     </span>
                     <span>{downloadProgress}%</span>
                   </div>
-                  <Progress
-                    value={downloadProgress}
-                    className="h-4 bg-white rounded-full"
-                  />
+                  <Progress value={downloadProgress} className="h-4 bg-white rounded-full" />
                 </div>
               )}
             </div>
@@ -253,14 +240,14 @@ function AppDetailsContent() {
           {app.screenshot_url && (
             <section className="space-y-6">
               <h2 className="text-3xl font-black flex items-center gap-3">
-                <Images className="h-6 w-6 text-primary" /> Media Preview
+                <Images className="h-6 w-6 text-primary" /> Preview
               </h2>
-              <div className="relative aspect-video rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl bg-muted group">
+              <div className="relative aspect-video rounded-[3rem] overflow-hidden border-8 border-white shadow-2xl bg-muted">
                 <Image
                   src={app.screenshot_url}
                   alt="App Screenshot"
                   fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="object-cover"
                   unoptimized
                 />
               </div>
@@ -269,25 +256,11 @@ function AppDetailsContent() {
 
           <section className="space-y-6">
             <h2 className="text-3xl font-black flex items-center gap-3">
-              <Info className="h-6 w-6 text-primary" /> About this App
+              <Info className="h-6 w-6 text-primary" /> Hub Description
             </h2>
             <div className="p-8 rounded-[3rem] bg-white border border-border/50 shadow-sm">
               <p className="text-muted-foreground leading-relaxed font-medium whitespace-pre-wrap text-xl">
                 {app.description}
-              </p>
-            </div>
-          </section>
-
-          <section className="p-10 rounded-[3rem] bg-primary/5 border border-primary/10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-            <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 shrink-0">
-              <ShieldCheck className="h-10 w-10" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-black">
-                Professional Security Audit
-              </h3>
-              <p className="text-muted-foreground font-medium mt-2 text-lg">
-                Every package on PLKAPK Hub undergoes a multi-stage security analysis, signature verification, and sandbox testing.
               </p>
             </div>
           </section>
@@ -296,39 +269,21 @@ function AppDetailsContent() {
         <aside className="space-y-8">
           <div className="p-8 rounded-[3rem] bg-card border border-border/50 shadow-sm space-y-8 sticky top-24">
             <h3 className="text-2xl font-black border-b border-border/50 pb-4">
-              Application Info
+              Metadata
             </h3>
             <div className="space-y-6">
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                  Version
-                </span>
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Version</span>
                 <span className="font-black text-lg">{app.version}</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                  Last Updated
-                </span>
-                <span className="font-black text-lg">
-                  {new Date(app.created_at).toLocaleDateString(undefined, {
-                    dateStyle: 'long',
-                  })}
-                </span>
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Developer</span>
+                <span className="font-black text-lg">{app.developer}</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                  Requirement
-                </span>
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Requirement</span>
                 <span className="font-black text-lg">Android 8.0+</span>
               </div>
-            </div>
-            <div className="pt-4">
-              <Button
-                variant="secondary"
-                className="w-full rounded-2xl h-14 font-black gap-2 hover:bg-primary/10 transition-colors"
-              >
-                <History className="h-5 w-5" /> Change Log
-              </Button>
             </div>
           </div>
         </aside>
@@ -341,11 +296,7 @@ export default function AppDetailsPage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <Navigation />
-      <Suspense fallback={
-        <div className="flex-1 flex items-center justify-center py-24">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      }>
+      <Suspense fallback={<div className="flex items-center justify-center py-24"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
         <AppDetailsContent />
       </Suspense>
     </div>

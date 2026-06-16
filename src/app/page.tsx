@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { supabase, AppData } from "@/lib/supabase";
 import { AppCard } from "@/components/app-card";
-import { Sparkles, LayoutGrid, Loader2, ShieldCheck } from "lucide-react";
+import { Sparkles, LayoutGrid, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HexagonLogo } from "@/components/logo";
 
@@ -24,6 +24,7 @@ export default function Home() {
         const { data, error } = await supabase
           .from('apps')
           .select('*')
+          .eq('is_hidden', false)
           .order('created_at', { ascending: false });
         
         if (!error && data) {
@@ -76,7 +77,7 @@ export default function Home() {
           </h2>
           <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="text-[9px] font-black text-emerald-700 uppercase">Secure</span>
+            <span className="text-[9px] font-black text-emerald-700 uppercase">Secure Hub</span>
           </div>
         </div>
 
@@ -105,7 +106,7 @@ export default function Home() {
             </div>
             <div>
                <h3 className="text-2xl font-black tracking-tight leading-tight">Supabase Protected Distribution</h3>
-               <p className="text-[11px] font-black text-white/40 uppercase tracking-widest mt-2">Native Infrastructure Hosting v1.0</p>
+               <p className="text-[11px] font-black text-white/40 uppercase tracking-widest mt-2">Native Infrastructure Hosting Active</p>
             </div>
           </div>
         </div>
