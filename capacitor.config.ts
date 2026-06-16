@@ -1,9 +1,10 @@
+
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.plkapkhub.store',
   appName: 'PLKAPK Hub',
-  webDir: 'out',
+  webDir: 'out', // Points to Next.js static export folder
   server: {
     androidScheme: 'https',
     allowNavigation: ['fpjrydfuhzwzkjuhkoaj.supabase.co']

@@ -1,49 +1,51 @@
-# PLKAPK Hub: Android APK Build & Release Guide
 
-This document provides definitive instructions for generating a production-ready APK for PLKAPK Hub.
+# PLKAPK Hub: Android APK Build & Release Guide (Production)
 
-## 1. Prepare Environment
+This project uses Next.js 15 with Capacitor 6. Follow these steps to generate your production APK.
+
+## 1. Environment Requirements
 - **Node.js**: v18+
-- **Android Studio**: Latest (Ladybug+)
+- **Android Studio**: Ladybug or newer
 - **JDK**: 17
-- **Android SDK**: API Level 26+ (Supports Android 8.0 through Android 14)
+- **Next.js Export**: Enabled (output: 'export')
 
-## 2. Generate Web Assets
+## 2. Build Web Assets (Static Export)
 ```bash
 npm run build
 ```
-This command generates the optimized static files in the `out/` (or `public/`) directory.
+This will generate the static files in the `out/` directory. Capacitor is configured to read from this folder.
 
-## 3. Sync Native Project
+## 3. Synchronize with Android Project
 ```bash
 npx cap sync android
 ```
-This command copies your Next.js build into the Android Studio project.
+This copies the `out/` files into the Android project's assets.
 
-## 4. Build APK (Command Line)
-To build a debug APK instantly:
+## 4. Building the APK
+### Via Command Line
 ```bash
 cd android
-./gradlew assembleDebug
+./gradlew assembleRelease
 ```
-Output: `android/app/build/outputs/apk/debug/app-debug.apk`
+Output: `android/app/build/outputs/apk/release/app-release-unsigned.apk`
 
-## 5. Production Release (Signed APK)
-1. Open the `android` folder in **Android Studio**.
-2. Select **Build > Generate Signed Bundle / APK**.
-3. Choose **APK**.
-4. Create/Select your keystore.
-5. Select **Release** variant.
+### Via Android Studio (Recommended for Signing)
+1. Open the `android/` folder in Android Studio.
+2. Go to **Build > Generate Signed Bundle / APK...**
+3. Select **APK**.
+4. Create or select your Key Store.
+5. Select the `release` build variant.
 6. Click **Finish**.
 
-## 6. Permissions Checklist
-The Hub is pre-configured with:
-- `INTERNET`: For Supabase data/storage.
-- `REQUEST_INSTALL_PACKAGES`: Required to install APKs downloaded from the hub.
-- `READ/WRITE_EXTERNAL_STORAGE`: For binary buffering.
+## 5. Deployment Permissions
+The app is pre-configured with:
+- `REQUEST_INSTALL_PACKAGES`: To allow the Hub to install downloaded APKs.
+- `INTERNET`: For Supabase data sync.
+- `WRITE_EXTERNAL_STORAGE`: For binary buffering.
 
-## 7. App Icons & Splash Screens
-To regenerate icons from a single source image:
+## 6. Project Export
+To bundle the entire project for local development, run:
 ```bash
-npx @capacitor/assets generate --android
+node scripts/export-project.js
 ```
+Then download the generated `plkapk-hub-export.zip`.

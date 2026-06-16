@@ -16,13 +16,12 @@ async function exportProject() {
   const hasAndroid = fs.existsSync(androidPath);
   
   console.log('----------------------------------------');
-  console.log('STARTING PROJECT EXPORT');
+  console.log('STARTING PROJECT EXPORT PROTOCOL');
   console.log('----------------------------------------');
   console.log(`Verifying source: Android folder is ${hasAndroid ? 'PRESENT' : 'MISSING'}`);
   
   if (!hasAndroid) {
-    console.warn('WARNING: The "android" folder was not found in the root directory.');
-    console.warn('It will be missing from the final ZIP unless created first.');
+    console.error('ERROR: The "android" folder was not found. Please run "npx cap add android" first.');
   }
 
   const output = fs.createWriteStream(zipPath);
@@ -36,17 +35,10 @@ async function exportProject() {
     console.log('File: ' + zipPath);
     console.log('Size: ' + (archive.pointer() / 1024 / 1024).toFixed(2) + ' MB');
     console.log('\nTO DOWNLOAD TO YOUR COMPUTER:');
-    console.log('1. Find "plkapk-hub-export.zip" in the left sidebar (File Explorer).');
-    console.log('2. Right-click the file and select "Download".');
+    console.log('1. Find "plkapk-hub-export.zip" in the left sidebar.');
+    console.log('2. Right-click and select "Download".');
+    console.log('3. Unzip and open the "android" folder in Android Studio.');
     console.log('----------------------------------------\n');
-  });
-
-  archive.on('warning', function(err) {
-    if (err.code === 'ENOENT') {
-      console.warn('Archiver Warning:', err);
-    } else {
-      throw err;
-    }
   });
 
   archive.on('error', function(err) {
@@ -56,10 +48,9 @@ async function exportProject() {
 
   archive.pipe(output);
 
-  // 1. Add essential root files individually
+  // Add root configuration files
   const rootFiles = [
     'package.json',
-    'package-lock.json',
     'capacitor.config.ts',
     'next.config.ts',
     'tailwind.config.ts',
@@ -67,39 +58,27 @@ async function exportProject() {
     'apphosting.yaml',
     'components.json',
     'README.md',
-    '.env',
-    'dev.nix'
+    '.env'
   ];
 
   rootFiles.forEach(file => {
     const fullPath = path.join(process.cwd(), file);
     if (fs.existsSync(fullPath)) {
-      console.log(`Adding file: ${file}`);
       archive.file(fullPath, { name: file });
     }
   });
 
-  // 2. Add source and configuration directories
-  const directories = [
-    'src',
-    'public',
-    'android', // Explicitly including the android native project
-    'docs',
-    'scripts'
-  ];
+  // Add critical directories
+  const directories = ['src', 'public', 'android', 'docs', 'scripts'];
 
   directories.forEach(dir => {
     const fullPath = path.join(process.cwd(), dir);
     if (fs.existsSync(fullPath)) {
-      console.log(`Adding directory: ${dir}/**`);
-      // Ensure the directory is added with its name to the zip root
+      console.log(`Injecting directory: ${dir}`);
       archive.directory(fullPath + '/', dir);
-    } else {
-      console.warn(`Skipping directory: ${dir} (Not found)`);
     }
   });
 
-  console.log('\nFinalizing archive...');
   await archive.finalize();
 }
 
