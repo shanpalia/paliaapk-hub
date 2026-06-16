@@ -1,7 +1,6 @@
 'use server';
 /**
  * @fileOverview A professional Genkit flow for generating structured, SEO-optimized app descriptions.
- *
  * - adminAutoGenerateAppDescription - Generates detailed hub metadata.
  * - AdminAutoGenerateAppDescriptionInput - Input parameters.
  * - AdminAutoGenerateAppDescriptionOutput - Detailed structured output.
@@ -23,7 +22,7 @@ export type AdminAutoGenerateAppDescriptionInput = z.infer<
 
 const AdminAutoGenerateAppDescriptionOutputSchema = z.object({
   fullDescription:
-    z.string().describe('The complete, formatted hub description including highlights, features, and installation info.'),
+    z.string().describe('The complete, formatted hub description including highlights and features.'),
   seoSummary:
     z.string().describe('A 160-character SEO meta-description.'),
   versionChangelog:
@@ -33,17 +32,26 @@ export type AdminAutoGenerateAppDescriptionOutput = z.infer<
   typeof AdminAutoGenerateAppDescriptionOutputSchema
 >;
 
+/**
+ * Server-side function to generate optimized hub content.
+ * Wraps the Genkit flow for clean integration with React Client Components.
+ */
 export async function adminAutoGenerateAppDescription(
   input: AdminAutoGenerateAppDescriptionInput
 ): Promise<AdminAutoGenerateAppDescriptionOutput> {
-  return adminAutoGenerateAppDescriptionFlow(input);
+  try {
+    return await adminAutoGenerateAppDescriptionFlow(input);
+  } catch (error) {
+    console.error("GenAI Service Fault:", error);
+    throw new Error("AI service temporarily unavailable.");
+  }
 }
 
 const prompt = ai.definePrompt({
   name: 'adminAutoGenerateAppDescriptionPrompt',
   input: {schema: AdminAutoGenerateAppDescriptionInputSchema},
   output: {schema: AdminAutoGenerateAppDescriptionOutputSchema},
-  prompt: `You are an elite app store copywriter and SEO specialist for PaliaAPK Hub.
+  prompt: `You are an elite app store copywriter for PaliaAPK Hub.
 Generate a professional, high-converting description for:
 
 App: {{{appName}}}
@@ -56,18 +64,16 @@ Developer: {{{developer}}}
 
 **Output Requirements:**
 
-1. **fullDescription**: A comprehensive hub description formatted with HTML/Markdown.
-   - **Opening**: A compelling hook about the app's value proposition.
-   - **Highlights Section**: 3-5 key unique selling points.
-   - **Features List**: A detailed bulleted list of core functionalities.
-   - **Installation Guide**: Clear steps for installing the APK on Android.
-   - **Technical Information**: Mention version {{{appVersion}}} and minimum requirements.
+1. **fullDescription**: A comprehensive overview and features list.
+   - Start with a compelling hook.
+   - Include a "Core Features" section with bullet points.
+   - Include a "Installation Protocol" section for APK side-loading.
 
 2. **seoSummary**: A punchy, SEO-optimized summary under 160 characters.
 
 3. **versionChangelog**: A professional "What's New" section for version {{{appVersion}}}.
 
-Style: Professional, trustworthy, and technically precise. Avoid marketing fluff; focus on utility and security.`,
+Style: Professional, trustworthy, and technical.`,
 });
 
 const adminAutoGenerateAppDescriptionFlow = ai.defineFlow(
@@ -78,6 +84,7 @@ const adminAutoGenerateAppDescriptionFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) throw new Error("AI failed to generate content.");
+    return output;
   }
 );

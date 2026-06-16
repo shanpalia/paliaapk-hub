@@ -150,9 +150,9 @@ function AddOrUpdateAppForm() {
         keywords: `${formData.appName}, APK, Hub, Android, ${formData.category}`
       });
       setAiResult(result);
-      toast({ title: "AI Copywriter Ready", description: "Optimization protocols complete." });
+      toast({ title: "AI Assistant Ready", description: "Description protocols generated successfully." });
     } catch (e: any) {
-      toast({ title: "AI Fault", description: e.message, variant: "destructive" });
+      toast({ title: "Protocol Fault", description: e.message || "AI service temporarily unavailable.", variant: "destructive" });
     } finally {
       setAiLoading(false);
     }
@@ -166,7 +166,7 @@ function AddOrUpdateAppForm() {
       whatsNew: aiResult.versionChangelog
     }));
     setAiResult(null);
-    toast({ title: "Hub Entry Updated", description: "AI content applied to draft." });
+    toast({ title: "Content Applied", description: "AI-generated description is now in the editor." });
   };
 
   const copyToClipboard = async (text: string) => {
@@ -264,7 +264,7 @@ function AddOrUpdateAppForm() {
       }
       router.push("/admin/apps");
     } catch (error: any) {
-      toast({ title: "Protocol Fault", description: error.message, variant: "destructive" });
+      toast({ title: "Distribution Fault", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
       setPublishStep(null);
@@ -406,7 +406,7 @@ function AddOrUpdateAppForm() {
                     disabled={aiLoading}
                   >
                     {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                    ✨ Generate with AI
+                    ✨ Generate AI Description
                   </Button>
                 </div>
 
@@ -431,7 +431,7 @@ function AddOrUpdateAppForm() {
                     </ScrollArea>
                     <div className="flex gap-3 pt-2">
                       <Button type="button" onClick={applyAiText} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest bg-emerald-500 hover:bg-emerald-600">
-                        Apply to Hub
+                        Use Generated Content
                       </Button>
                       <Button type="button" variant="outline" onClick={handleAiGeneration} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest">
                         Regenerate
