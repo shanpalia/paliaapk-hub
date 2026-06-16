@@ -1,10 +1,10 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for administrators to automatically generate app descriptions and version changelogs.
+ * @fileOverview A professional Genkit flow for generating structured, SEO-optimized app descriptions.
  *
- * - adminAutoGenerateAppDescription - A function to trigger the AI-powered generation of app details.
- * - AdminAutoGenerateAppDescriptionInput - The input type for the generation function.
- * - AdminAutoGenerateAppDescriptionOutput - The return type for the generation function.
+ * - adminAutoGenerateAppDescription - Generates detailed hub metadata.
+ * - AdminAutoGenerateAppDescriptionInput - Input parameters.
+ * - AdminAutoGenerateAppDescriptionOutput - Detailed structured output.
  */
 
 import {ai} from '@/ai/genkit';
@@ -13,21 +13,21 @@ import {z} from 'genkit';
 const AdminAutoGenerateAppDescriptionInputSchema = z.object({
   appName: z.string().describe('The name of the application.'),
   appVersion: z.string().describe('The version number of the application.'),
-  featureSummary:
-    z.string().describe('A brief summary of the key features and updates for this app version.'),
+  category: z.string().describe('The category of the application.'),
+  developer: z.string().describe('The name of the developer or organization.'),
+  keywords: z.string().optional().describe('Comma-separated keywords to influence SEO.'),
 });
 export type AdminAutoGenerateAppDescriptionInput = z.infer<
   typeof AdminAutoGenerateAppDescriptionInputSchema
 >;
 
 const AdminAutoGenerateAppDescriptionOutputSchema = z.object({
-  appDescription:
-    z.string().describe('A comprehensive, engaging, and SEO-friendly app description.'),
+  fullDescription:
+    z.string().describe('The complete, formatted hub description including highlights, features, and installation info.'),
+  seoSummary:
+    z.string().describe('A 160-character SEO meta-description.'),
   versionChangelog:
-    z.string()
-      .describe(
-        'A detailed changelog for the specified app version, highlighting new features, improvements, and bug fixes.'
-      ),
+    z.string().describe('A detailed changelog for the version.'),
 });
 export type AdminAutoGenerateAppDescriptionOutput = z.infer<
   typeof AdminAutoGenerateAppDescriptionOutputSchema
@@ -43,31 +43,31 @@ const prompt = ai.definePrompt({
   name: 'adminAutoGenerateAppDescriptionPrompt',
   input: {schema: AdminAutoGenerateAppDescriptionInputSchema},
   output: {schema: AdminAutoGenerateAppDescriptionOutputSchema},
-  prompt: `You are an expert app content writer, skilled in creating compelling app descriptions and clear, detailed version changelogs for app stores. Your goal is to help an admin efficiently populate app details.
+  prompt: `You are an elite app store copywriter and SEO specialist for PaliaAPK Hub.
+Generate a professional, high-converting description for:
 
-Based on the following information, generate a comprehensive app description and a detailed version changelog.
-
-App Name: {{{appName}}}
-App Version: {{{appVersion}}}
-Feature Summary: {{{featureSummary}}}
+App: {{{appName}}}
+Version: {{{appVersion}}}
+Category: {{{category}}}
+Developer: {{{developer}}}
+{{#if keywords}}Target Keywords: {{{keywords}}}{{/if}}
 
 ---
 
-**App Description Guidelines:**
-- Be engaging and highlight the app's core value proposition.
-- Include keywords relevant to the app's functionality.
-- Structure with clear paragraphs and potentially bullet points for readability.
-- Explain what the app does, who it's for, and why users should download it.
-- Keep it concise but informative, aiming for 200-400 words.
+**Output Requirements:**
 
-**Version Changelog Guidelines (for version {{{appVersion}}}):**
-- List new features, improvements, and bug fixes introduced in this version.
-- Use clear, action-oriented language.
-- Format as a bulleted list.
-- Be specific about changes where possible, based on the feature summary.
-- The changelog should only cover the specific version provided.
+1. **fullDescription**: A comprehensive hub description formatted with HTML/Markdown.
+   - **Opening**: A compelling hook about the app's value proposition.
+   - **Highlights Section**: 3-5 key unique selling points.
+   - **Features List**: A detailed bulleted list of core functionalities.
+   - **Installation Guide**: Clear steps for installing the APK on Android.
+   - **Technical Information**: Mention version {{{appVersion}}} and minimum requirements.
 
-Ensure the output is in JSON format as per the specified schema for 'appDescription' and 'versionChangelog'.`,
+2. **seoSummary**: A punchy, SEO-optimized summary under 160 characters.
+
+3. **versionChangelog**: A professional "What's New" section for version {{{appVersion}}}.
+
+Style: Professional, trustworthy, and technically precise. Avoid marketing fluff; focus on utility and security.`,
 });
 
 const adminAutoGenerateAppDescriptionFlow = ai.defineFlow(

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -12,7 +11,11 @@ import {
   Sparkles,
   ShieldCheck,
   ArrowLeft,
-  Wand2
+  Wand2,
+  Copy,
+  Check,
+  History,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,7 +30,7 @@ import { useFirestore } from "@/firebase";
 import { collection, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { AppCard } from "@/components/app-card";
 import { uploadToGithubRelease } from "@/lib/github-actions";
-import { adminAutoGenerateAppDescription } from "@/ai/flows/admin-auto-generate-app-description";
+import { adminAutoGenerateAppDescription, AdminAutoGenerateAppDescriptionOutput } from "@/ai/flows/admin-auto-generate-app-description";
 
 const CATEGORIES = ["Games", "Tools", "Social", "Entertainment", "Education", "Lifestyle", "Productivity"];
 
@@ -43,6 +46,10 @@ function AddOrUpdateAppForm() {
   
   const [iconPreview, setIconPreview] = useState<string>("");
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
+  
+  // AI Generation States
+  const [aiResult, setAiResult] = useState<AdminAutoGenerateAppDescriptionOutput | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -130,23 +137,40 @@ function AddOrUpdateAppForm() {
       return;
     }
     setAiLoading(true);
+    setAiResult(null);
     try {
       const result = await adminAutoGenerateAppDescription({
         appName: formData.appName,
         appVersion: formData.version,
-        featureSummary: formData.description.substring(0, 100) || "Modern utility app for Android."
+        category: formData.category,
+        developer: formData.developer,
+        keywords: `${formData.appName}, APK, Hub, Android, ${formData.category}`
       });
-      setFormData(prev => ({
-        ...prev,
-        description: result.appDescription,
-        whatsNew: result.versionChangelog
-      }));
-      toast({ title: "AI Generation Complete", description: "Hub metadata optimized." });
+      setAiResult(result);
+      toast({ title: "AI Copywriter Ready", description: "Optimization protocols complete." });
     } catch (e: any) {
       toast({ title: "AI Fault", description: e.message, variant: "destructive" });
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const applyAiText = () => {
+    if (!aiResult) return;
+    setFormData(prev => ({
+      ...prev,
+      description: aiResult.fullDescription,
+      whatsNew: aiResult.versionChangelog
+    }));
+    setAiResult(null);
+    toast({ title: "Hub Entry Updated", description: "AI content applied to draft." });
+  };
+
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Copied to Clipboard" });
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -203,20 +227,15 @@ function AddOrUpdateAppForm() {
         setPublishStep("Distributing Assets to GitHub...");
         const uploadResults = await uploadToGithubRelease(formData.version, filesToUpload);
         
-        const newScreenshots: string[] = [];
         uploadResults.forEach(res => {
           if (res.name.includes('icon-')) {
             finalIconUrl = res.assetUrl;
           } else if (res.name.endsWith('.apk')) {
             finalApkUrl = res.assetUrl;
           } else if (res.name.includes('shot-')) {
-            newScreenshots.push(res.assetUrl);
+            finalScreenshots.push(res.assetUrl);
           }
         });
-        
-        if (newScreenshots.length > 0) {
-           finalScreenshots = [...finalScreenshots, ...newScreenshots];
-        }
       }
 
       setPublishStep("Finalizing Hub Metadata...");
@@ -250,7 +269,7 @@ function AddOrUpdateAppForm() {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 pb-24">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" className="rounded-2xl" onClick={() => router.push('/admin/dashboard')}>
           <ArrowLeft className="h-6 w-6" />
@@ -266,23 +285,12 @@ function AddOrUpdateAppForm() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
         <div className="xl:col-span-2 space-y-10">
           <Card className="rounded-[3.5rem] border-none shadow-sm bg-white p-10">
-            <form onSubmit={handleSubmit} className="space-y-10">
+            <form onSubmit={handleSubmit} className="space-y-12">
+              {/* Asset Management */}
               <div className="space-y-8">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                    <ArrowUpCircle className="h-4 w-4" /> Binary Hub Distribution
-                  </h3>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    className="text-[9px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50"
-                    onClick={handleAiGeneration}
-                    disabled={aiLoading}
-                  >
-                    {aiLoading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Wand2 className="h-3 w-3 mr-2" />}
-                    AI Optimization
-                  </Button>
-                </div>
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                  <ArrowUpCircle className="h-4 w-4" /> Binary Assets
+                </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                   <div className="space-y-4">
@@ -300,17 +308,6 @@ function AddOrUpdateAppForm() {
                           )}
                           <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleIconChange} />
                         </div>
-                        {iconPreview && (
-                          <Button 
-                            type="button" 
-                            size="icon" 
-                            variant="destructive" 
-                            className="absolute -top-2 -right-2 rounded-full h-8 w-8 shadow-lg" 
-                            onClick={() => { setIconFile(null); setIconPreview(""); }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -334,34 +331,76 @@ function AddOrUpdateAppForm() {
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-4">
-                  <label className="text-[9px] font-black uppercase tracking-widest ml-2 text-muted-foreground">Intelligence Gallery (Screenshots)</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                    {screenshotPreviews.map((src, idx) => (
-                      <div key={idx} className="relative aspect-[9/16] rounded-2xl overflow-hidden border border-gray-100 shadow-sm group">
-                        <img src={src} className="w-full h-full object-cover" alt="shot" />
-                        <button 
-                          type="button" 
-                          onClick={() => setScreenshotPreviews(prev => prev.filter((_, i) => i !== idx))}
-                          className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+              {/* Hub Description Section */}
+              <div className="space-y-8 bg-gray-50/50 p-10 rounded-[3rem] border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Hub Description
+                  </h3>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="rounded-full h-10 px-6 font-black text-[10px] uppercase tracking-widest bg-emerald-500 text-white border-none hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+                    onClick={handleAiGeneration}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    ✨ Generate with AI
+                  </Button>
+                </div>
+
+                {/* AI Result Display */}
+                {aiLoading && (
+                  <div className="py-12 flex flex-col items-center justify-center gap-4 bg-white rounded-[2rem] border border-dashed border-primary/20 animate-pulse">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">AI Copywriter is drafting hub assets...</p>
+                  </div>
+                )}
+
+                {aiResult && !aiLoading && (
+                  <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 bg-white p-8 rounded-[2rem] border border-emerald-100 shadow-xl shadow-emerald-500/5">
+                    <div className="flex items-center justify-between">
+                      <Badge className="bg-emerald-500 font-black text-[8px] uppercase tracking-widest">AI Generated Optimization</Badge>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => copyToClipboard(aiResult.fullDescription)} className="h-8 w-8">
+                          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
                       </div>
-                    ))}
-                    <div className="relative aspect-[9/16] rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 cursor-pointer transition-colors">
-                      <ImageIcon className="h-5 w-5 text-gray-300" />
-                      <span className="text-[8px] font-black uppercase text-gray-400">Add shot</span>
-                      <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleScreenshotChange} />
+                    </div>
+                    <ScrollArea className="h-48 rounded-xl bg-gray-50 p-6 border border-gray-100">
+                      <div className="text-xs font-medium leading-relaxed whitespace-pre-wrap">{aiResult.fullDescription}</div>
+                    </ScrollArea>
+                    <div className="flex gap-3 pt-2">
+                      <Button type="button" onClick={applyAiText} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest bg-emerald-500 hover:bg-emerald-600">
+                        Use Generated Text
+                      </Button>
+                      <Button type="button" variant="outline" onClick={handleAiGeneration} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest">
+                        Regenerate
+                      </Button>
                     </div>
                   </div>
+                )}
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between ml-2">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Editor (Manual / HTML Mode)</label>
+                  </div>
+                  <Textarea 
+                    placeholder="Describe app functionality, features, and technical highlights..." 
+                    className="rounded-[2.5rem] min-h-[300px] bg-white border-gray-100 p-8 font-medium text-sm leading-relaxed shadow-inner" 
+                    value={formData.description} 
+                    onChange={e => setFormData({...formData, description: e.target.value})} 
+                    required 
+                  />
                 </div>
               </div>
 
+              {/* Changelog & Metadata */}
               <div className="space-y-8">
-                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" /> Metadata Profile
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                  <History className="h-4 w-4" /> Technical Profile
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
@@ -373,7 +412,7 @@ function AddOrUpdateAppForm() {
                     <Input placeholder="e.g. 1.0.4" className="rounded-2xl h-14 bg-gray-50/50 border-gray-100 font-bold" value={formData.version} onChange={e => setFormData({...formData, version: e.target.value})} required />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">Distribution Category</label>
+                    <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">Category</label>
                     <Select value={formData.category} onValueChange={val => setFormData({...formData, category: val})}>
                       <SelectTrigger className="rounded-2xl h-14 bg-gray-50/50 border-gray-100 font-bold">
                         <SelectValue placeholder="Select Category" />
@@ -389,12 +428,8 @@ function AddOrUpdateAppForm() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">Hub Description (HTML/Rich Text)</label>
-                  <Textarea placeholder="Detailed app summary..." className="rounded-[2rem] min-h-[160px] bg-gray-50/50 border-gray-100 p-8 font-medium text-sm leading-relaxed" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required />
-                </div>
-                <div className="space-y-2">
                   <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">Intelligence Report (Changelog)</label>
-                  <Textarea placeholder="Version updates..." className="rounded-2xl min-h-[100px] bg-gray-50/50 border-gray-100 p-6 font-bold text-xs" value={formData.whatsNew} onChange={e => setFormData({...formData, whatsNew: e.target.value})} />
+                  <Textarea placeholder="Version updates..." className="rounded-2xl min-h-[120px] bg-gray-50/50 border-gray-100 p-6 font-bold text-xs" value={formData.whatsNew} onChange={e => setFormData({...formData, whatsNew: e.target.value})} />
                 </div>
               </div>
 
@@ -420,17 +455,6 @@ function AddOrUpdateAppForm() {
             <h3 className="text-sm font-black uppercase tracking-[0.3em] px-4">Tactical Preview</h3>
             <div className="pointer-events-none scale-95 origin-top opacity-90 drop-shadow-2xl">
               <AppCard app={{ ...formData, id: 'preview', iconUrl: iconPreview } as any} />
-            </div>
-            <div className="bg-emerald-50/50 p-8 rounded-[2.5rem] border border-emerald-100/50 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500 rounded-lg">
-                  <ShieldCheck className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[11px] font-black uppercase tracking-widest text-emerald-800">Distribution Integrity</span>
-              </div>
-              <p className="text-[11px] font-medium text-emerald-700 leading-relaxed">
-                Binary will be verified through the GitHub Release API v3. All assets are served via high-performance Global CDN endpoints.
-              </p>
             </div>
           </div>
         </div>
