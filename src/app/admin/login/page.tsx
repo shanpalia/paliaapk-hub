@@ -1,16 +1,14 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, ArrowLeft, Mail, Lock, Loader2, UserCheck, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Loader2, UserCheck, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { useAuth, useFirestore } from "@/firebase";
+import { supabase } from "@/lib/supabase";
 import { HexagonLogo } from "@/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -25,45 +23,32 @@ export default function AdminLoginPage() {
   const [verifyingUser, setVerifyingUser] = useState<{ email: string; role: string | null } | null>(null);
   
   const router = useRouter();
-  const auth = useAuth();
-  const db = useFirestore();
-
-  useEffect(() => {
-    console.log("Admin Login: Terminal Ready.");
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
     setVerifyingUser(null);
-    
-    if (!auth || !db) {
-      const msg = "Infrastructure node offline. Firebase not initialized.";
-      setAuthError(msg);
-      console.error(msg);
-      return;
-    }
-
     setLoading(true);
-    console.log("Admin Login: Initiating handshake for", email);
     
     try {
-      // 1. Authenticate with Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      const user = data.user;
       
-      console.log("Admin Login: Auth handshake successful. UID:", user.uid);
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('uid', user.uid)
+        .single();
       
-      // 2. Fetch Clearance Role from Firestore
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-      const role = userDoc.exists() ? userDoc.data()?.role : "user";
-      
+      const role = profile?.role || 'user';
       setVerifyingUser({ email: user.email || "Anonymous", role });
 
-      // 3. Admin Clearance Logic
       if (user.email?.toLowerCase() === TEST_ADMIN_EMAIL || role === "admin") {
-        console.log("Admin Login: Clearance Level VERIFIED.");
         toast({ 
           title: "Access Authorized", 
           description: `Welcome. Clearance Level: ${role === 'admin' ? 'ROOT' : 'IDENTIFIED'}`,
@@ -75,17 +60,12 @@ export default function AdminLoginPage() {
         }, 1500);
       } else {
         const errorMsg = "Access Denied: Insufficient clearance for administrative terminal.";
-        console.error(errorMsg);
         setAuthError(errorMsg);
         toast({ title: "Insufficient Clearance", description: errorMsg, variant: "destructive" });
-        await signOut(auth);
+        await supabase.auth.signOut();
       }
     } catch (error: any) {
-      console.error("Admin Login: Critical Fault.", error.code, error.message);
-      let friendlyMessage = error.message;
-      if (error.code === 'auth/invalid-credential') friendlyMessage = "Invalid administrative credentials.";
-      if (error.code === 'auth/user-not-found') friendlyMessage = "Entity not found in hub database.";
-      
+      const friendlyMessage = error.message || "Protocol fault during authentication.";
       setAuthError(friendlyMessage);
       toast({ 
         title: "Protocol Fault", 

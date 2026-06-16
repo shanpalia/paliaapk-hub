@@ -15,9 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { HexagonLogo } from "@/components/logo";
-import { useAuth, useUser } from "@/firebase";
 import { useEffect, useState, useRef } from "react";
-import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 
 const TEST_ADMIN_EMAIL = "shanpalia786@gmail.com";
@@ -30,14 +29,29 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const auth = useAuth();
-  const { user: currentUser, loading: userLoading } = useUser();
+  const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
   const [timedOut, setTimedOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clearance Bypass for Login Terminal
   const isLoginPage = pathname === "/admin/login";
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setLoading(false);
+    };
+    fetchSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (isLoginPage) {
@@ -60,24 +74,28 @@ export default function AdminLayout({
     }, AUTH_TIMEOUT_MS);
 
     async function checkClearance() {
-      if (!userLoading) {
-        if (!currentUser) {
+      if (!loading) {
+        if (!user) {
           setIsAdmin(false);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
           router.push("/admin/login");
           return;
         }
 
-        if (currentUser.email === TEST_ADMIN_EMAIL) {
+        if (user.email === TEST_ADMIN_EMAIL) {
           setIsAdmin(true);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
           return;
         }
 
-        const db = getFirestore();
         try {
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-          if (userDoc.exists() && userDoc.data()?.role === "admin") {
+          const { data: profile, error } = await supabase
+            .from('users')
+            .select('role')
+            .eq('uid', user.uid)
+            .single();
+
+          if (profile && profile.role === 'admin') {
             setIsAdmin(true);
           } else {
             setIsAdmin(false);
@@ -97,12 +115,11 @@ export default function AdminLayout({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [currentUser, userLoading, router, isLoginPage, isAdmin]);
+  }, [user, loading, router, isLoginPage, isAdmin]);
 
   const handleLogout = async () => {
-    if (!auth) return;
     try {
-      await auth.signOut();
+      await supabase.auth.signOut();
       router.push("/");
     } catch (e) {
       console.error("Admin Layout: Logout fault.", e);
@@ -120,7 +137,7 @@ export default function AdminLayout({
   }
 
   // Clearance Loading State
-  if (userLoading || (isAdmin === null && !timedOut)) {
+  if (loading || (isAdmin === null && !timedOut)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-white">
         <div className="relative">
@@ -136,7 +153,7 @@ export default function AdminLayout({
   }
 
   // Access Denied State
-  if (isAdmin === false && !userLoading) {
+  if (isAdmin === false && !loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <ShieldAlert className="h-16 w-16 text-destructive mb-4" />

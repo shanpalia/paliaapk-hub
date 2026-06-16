@@ -1,7 +1,7 @@
+
 "use client";
 
 import { 
-  LayoutDashboard, 
   PlusCircle, 
   Users, 
   Package, 
@@ -13,34 +13,39 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
-import { AppEntry, UserProfile } from "@/lib/types";
+import { useState, useEffect } from "react";
+import { supabase, AppData, UserProfile } from "@/lib/supabase";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const db = useFirestore();
-  const { user: currentUser } = useUser();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [apps, setApps] = useState<AppData[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const appsQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, "apps"), orderBy("createdAt", "desc"));
-  }, [db]);
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUser(session?.user ?? null);
 
-  const { data: apps } = useCollection<AppEntry>(appsQuery);
+      const [appsRes, usersRes] = await Promise.all([
+        supabase.from('apps').select('*'),
+        supabase.from('users').select('*')
+      ]);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "users");
-  }, [db]);
+      if (appsRes.data) setApps(appsRes.data);
+      if (usersRes.data) setUsers(usersRes.data);
+      setLoading(false);
+    };
 
-  const { data: users } = useCollection<UserProfile>(usersQuery);
+    fetchData();
+  }, []);
 
   const stats = [
-    { label: "Total Binaries", val: apps?.length || 0, icon: Package, color: "bg-blue-50/50 text-blue-600" },
-    { label: "Client Nodes", val: users?.length || 0, icon: Users, color: "bg-emerald-50/50 text-emerald-600" },
-    { label: "Hub Traffic", val: apps?.reduce((acc, a) => acc + (a.downloads || 0), 0).toLocaleString(), icon: Activity, color: "bg-orange-50/50 text-orange-600" },
-    { label: "Featured Assets", val: apps?.filter(a => a.isFeatured).length || 0, icon: Sparkles, color: "bg-indigo-50/50 text-indigo-600" }
+    { label: "Total Binaries", val: apps.length, icon: Package, color: "bg-blue-50/50 text-blue-600" },
+    { label: "Client Nodes", val: users.length, icon: Users, color: "bg-emerald-50/50 text-emerald-600" },
+    { label: "Hub Traffic", val: apps.reduce((acc, a) => acc + (a.downloads || 0), 0).toLocaleString(), icon: Activity, color: "bg-orange-50/50 text-orange-600" },
+    { label: "Featured Assets", val: apps.filter(a => a.is_featured).length, icon: Sparkles, color: "bg-indigo-50/50 text-indigo-600" }
   ];
 
   const quickActions = [
@@ -55,7 +60,7 @@ export default function AdminDashboard() {
       <div>
         <h1 className="text-5xl font-black font-headline tracking-tighter uppercase">Command Center</h1>
         <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-primary/10 w-fit px-4 py-1.5 rounded-full">
-          Authenticated Node: {currentUser?.email}
+          Authenticated Node: {currentUser?.email || "System"}
         </p>
       </div>
 
@@ -102,7 +107,7 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-2">
               <h3 className="text-4xl font-black tracking-tighter uppercase leading-tight">Infrastructure Node<br />Status: Nominal</h3>
-              <p className="text-white/40 text-[11px] font-black uppercase tracking-[0.4em]">GitHub Global Distribution Framework v3 Active</p>
+              <p className="text-white/40 text-[11px] font-black uppercase tracking-[0.4em]">Native Supabase Distribution Framework Active</p>
             </div>
           </div>
           <Button 

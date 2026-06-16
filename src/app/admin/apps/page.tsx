@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Search, 
   Edit, 
@@ -18,24 +18,49 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, updateDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
-import { AppEntry } from "@/lib/types";
+import { supabase, AppData } from "@/lib/supabase";
+import { toast } from "@/hooks/use-toast";
 
 export default function ManageApps() {
+  const [apps, setApps] = useState<AppData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
-  const db = useFirestore();
 
-  const appsQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, "apps"), orderBy("createdAt", "desc"));
-  }, [db]);
+  useEffect(() => {
+    fetchApps();
+  }, []);
 
-  const { data: apps, loading } = useCollection<AppEntry>(appsQuery);
+  const fetchApps = async () => {
+    const { data, error } = await supabase
+      .from('apps')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (data) setApps(data);
+    setLoading(false);
+  };
 
-  const filteredApps = apps?.filter(app => 
-    app.appName?.toLowerCase().includes(searchQuery.toLowerCase())
+  const toggleVisibility = async (id: string, currentHidden: boolean) => {
+    const { error } = await supabase
+      .from('apps')
+      .update({ is_hidden: !currentHidden } as any)
+      .eq('id', id);
+    
+    if (!error) fetchApps();
+  };
+
+  const deleteApp = async (id: string) => {
+    if (!confirm("Decommission this hub entry?")) return;
+    const { error } = await supabase.from('apps').delete().eq('id', id);
+    if (!error) {
+      toast({ title: "Hub Entry Removed" });
+      fetchApps();
+    }
+  };
+
+  const filteredApps = apps.filter(app => 
+    app.app_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
@@ -80,16 +105,16 @@ export default function ManageApps() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredApps?.map((app) => (
+            {filteredApps.map((app) => (
               <TableRow key={app.id} className="h-24 hover:bg-gray-50/30 border-gray-100 group">
                 <TableCell className="pl-8">
                   <div className="flex items-center gap-4">
                     <img 
-                      src={app.iconUrl || `https://picsum.photos/seed/${app.id}/100/100`} 
-                      className={`w-14 h-14 rounded-2xl object-cover shadow-sm ${app.isHidden ? 'opacity-30 grayscale' : ''}`} 
+                      src={app.icon_url || `https://picsum.photos/seed/${app.id}/100/100`} 
+                      className={`w-14 h-14 rounded-2xl object-cover shadow-sm ${app.is_hidden ? 'opacity-30 grayscale' : ''}`} 
                     />
                     <div>
-                      <p className={`font-black tracking-tighter ${app.isHidden ? 'text-muted-foreground line-through' : 'text-lg'}`}>{app.appName}</p>
+                      <p className={`font-black tracking-tighter ${app.is_hidden ? 'text-muted-foreground line-through' : 'text-lg'}`}>{app.app_name}</p>
                       <Badge variant="secondary" className="rounded-full font-black text-[7px] uppercase tracking-wider h-4">{app.category}</Badge>
                     </div>
                   </div>
@@ -102,9 +127,9 @@ export default function ManageApps() {
                       size="icon" 
                       variant="ghost" 
                       className="rounded-xl h-10 w-10" 
-                      onClick={() => updateDoc(doc(db!, "apps", app.id), { isHidden: !app.isHidden })}
+                      onClick={() => toggleVisibility(app.id, app.is_hidden || false)}
                     >
-                      {app.isHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-primary" />}
+                      {app.is_hidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4 text-primary" />}
                     </Button>
                     <Button 
                       size="icon" 
@@ -118,7 +143,7 @@ export default function ManageApps() {
                       size="icon" 
                       variant="ghost" 
                       className="rounded-xl h-10 w-10 text-red-500 hover:text-red-600 hover:bg-red-50" 
-                      onClick={() => confirm("Decommission this hub entry?") && deleteDoc(doc(db!, "apps", app.id))}
+                      onClick={() => deleteApp(app.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -126,7 +151,7 @@ export default function ManageApps() {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredApps?.length === 0 && (
+            {filteredApps.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="h-64 text-center">
                   <div className="flex flex-col items-center justify-center gap-4 opacity-30">

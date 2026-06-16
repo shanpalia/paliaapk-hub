@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Smartphone, LayoutGrid, Zap, Package, ShieldCheck } from "lucide-react";
+import { Smartphone, LayoutGrid, Zap, Package, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StoreIcon } from "@/components/StoreIcon";
 
@@ -59,16 +59,16 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           </div>
 
           {/* Floating Elements Around Phone */}
-          <div className="absolute top-0 -left-4 p-4 bg-white rounded-2xl shadow-xl z-20 animate-bounce transition-all duration-[3000ms] delay-75">
+          <div className="absolute top-0 -left-4 p-4 bg-white rounded-2xl shadow-xl z-20 animate-bounce transition-all [animation-duration:3000ms] delay-75">
              <Smartphone className="h-8 w-8 text-primary" />
           </div>
-          <div className="absolute bottom-10 -right-6 p-4 bg-white rounded-2xl shadow-xl z-20 animate-bounce transition-all duration-[2500ms] delay-500">
+          <div className="absolute bottom-10 -right-6 p-4 bg-white rounded-2xl shadow-xl z-20 animate-bounce transition-all [animation-duration:2500ms] delay-500">
              <LayoutGrid className="h-8 w-8 text-blue-500" />
           </div>
-          <div className="absolute top-20 -right-10 p-4 bg-white rounded-2xl shadow-xl z-20 animate-bounce transition-all duration-[4000ms] delay-1000">
+          <div className="absolute top-20 -right-10 p-4 bg-white rounded-2xl shadow-xl z-20 animate-bounce transition-all [animation-duration:4000ms] delay-1000">
              <Zap className="h-8 w-8 text-amber-500" />
           </div>
-          <div className="absolute bottom-20 -left-12 p-4 bg-white rounded-2xl shadow-xl z-20 animate-bounce transition-all duration-[3500ms] delay-300">
+          <div className="absolute bottom-20 -left-12 p-4 bg-white rounded-2xl shadow-xl z-20 animate-bounce transition-all [animation-duration:3500ms] delay-300">
              <ShieldCheck className="h-8 w-8 text-green-500" />
           </div>
         </div>
