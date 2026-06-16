@@ -4,40 +4,42 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShieldCheck, Download } from "lucide-react";
-import { AppEntry } from "@/lib/types";
-import { useFirestore } from "@/firebase";
-import { doc, updateDoc, increment } from "firebase/firestore";
+import { AppData, supabase } from "@/lib/supabase";
 
 interface AppCardProps {
-  app: AppEntry;
+  app: AppData;
   variant?: 'compact' | 'large';
 }
 
 export function AppCard({ app, variant = 'compact' }: AppCardProps) {
-  const db = useFirestore();
-  const displayIcon = app.iconUrl || `https://picsum.photos/seed/${app.id}/200/200`;
+  const displayIcon = app.icon_url || `https://picsum.photos/seed/${app.id}/200/200`;
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (app.apkUrl) {
-      window.open(app.apkUrl, "_blank");
-      // Background increment of traffic
-      if (db) {
-        const appRef = doc(db, "apps", app.id);
-        updateDoc(appRef, { downloads: increment(1) });
+    if (app.apk_url) {
+      window.open(app.apk_url, "_blank");
+      
+      // Background increment of traffic using Supabase
+      try {
+        await supabase
+          .from('apps')
+          .update({ downloads: (app.downloads || 0) + 1 })
+          .eq('id', app.id);
+      } catch (err) {
+        console.error("Hub Distribution: Download count update failed", err);
       }
     }
   };
 
   if (variant === 'large') {
     return (
-      <Link href={`/app/${app.id}`} className="block group">
+      <Link href={`/apps/${app.id}`} className="block group">
         <div className="relative aspect-[21/10] rounded-[3rem] overflow-hidden mb-3 shadow-2xl transition-all active:scale-[0.98]">
           <Image
             src={displayIcon}
-            alt={app.appName}
+            alt={app.app_name}
             fill
             className="object-cover transition-transform group-hover:scale-105 duration-1000"
             unoptimized
@@ -48,7 +50,7 @@ export function AppCard({ app, variant = 'compact' }: AppCardProps) {
               <div className="bg-primary/20 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/20 w-fit">
                 Featured Release
               </div>
-              <h3 className="font-black text-3xl font-headline tracking-tighter leading-none">{app.appName}</h3>
+              <h3 className="font-black text-3xl font-headline tracking-tighter leading-none">{app.app_name}</h3>
               <p className="text-xs text-white/70 line-clamp-1 font-bold italic">Verified by {app.developer || "ShanPalia"}</p>
             </div>
             <div className="bg-white text-primary px-8 py-3 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-primary hover:text-white transition-colors">
@@ -61,11 +63,11 @@ export function AppCard({ app, variant = 'compact' }: AppCardProps) {
   }
 
   return (
-    <Link href={`/app/${app.id}`} className="flex items-center gap-5 p-5 glass rounded-[2.5rem] transition-all group hover:shadow-xl hover:bg-white border border-gray-100/50">
+    <Link href={`/apps/${app.id}`} className="flex items-center gap-5 p-5 glass rounded-[2.5rem] transition-all group hover:shadow-xl hover:bg-white border border-gray-100/50">
       <div className="relative w-20 h-20 rounded-[1.75rem] overflow-hidden shadow-lg border border-white flex-shrink-0 bg-gray-50">
         <img
           src={displayIcon}
-          alt={app.appName}
+          alt={app.app_name}
           className="w-full h-full object-cover"
         />
       </div>
@@ -73,7 +75,7 @@ export function AppCard({ app, variant = 'compact' }: AppCardProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-black text-lg truncate text-foreground font-headline tracking-tighter leading-tight group-hover:text-primary transition-colors">
-            {app.appName}
+            {app.app_name}
           </h3>
           <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md shrink-0">
             v{app.version}
@@ -85,7 +87,7 @@ export function AppCard({ app, variant = 'compact' }: AppCardProps) {
         </p>
 
         <p className="text-[11px] text-muted-foreground line-clamp-1 mt-2 font-medium">
-          {app.downloads?.toLocaleString() || 0} downloads
+          {app.downloads?.toLocaleString() || 0} Downloads
         </p>
 
         <div className="flex items-center gap-2 mt-3">

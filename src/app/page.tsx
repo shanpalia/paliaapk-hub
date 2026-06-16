@@ -20,15 +20,20 @@ export default function Home() {
 
   useEffect(() => {
     const fetchApps = async () => {
-      const { data, error } = await supabase
-        .from('apps')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (!error && data) {
-        setApps(data);
+      try {
+        const { data, error } = await supabase
+          .from('apps')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (!error && data) {
+          setApps(data);
+        }
+      } catch (err) {
+        console.error("Hub Discovery: Repository scan failed", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchApps();
@@ -56,7 +61,7 @@ export default function Home() {
         {loading ? (
           <Skeleton className="w-full aspect-[21/10] rounded-[3rem]" />
         ) : featuredApp ? (
-          <AppCard app={featuredApp as any} variant="large" />
+          <AppCard app={featuredApp} variant="large" />
         ) : (
           <div className="w-full aspect-[21/10] rounded-[3rem] bg-gray-50 flex items-center justify-center border border-gray-100">
              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Hub Repository Empty</p>
@@ -80,7 +85,7 @@ export default function Home() {
             [1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full rounded-[2.5rem]" />)
           ) : apps.length > 0 ? (
             apps.map((app) => (
-              <AppCard key={app.id} app={app as any} />
+              <AppCard key={app.id} app={app} />
             ))
           ) : (
             <div className="text-center py-20 bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-200">
