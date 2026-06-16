@@ -17,7 +17,10 @@ import {
   FileText,
   Save,
   Eye,
-  LayoutGrid
+  LayoutGrid,
+  Zap,
+  ShieldAlert,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,7 +36,11 @@ import { useFirestore } from "@/firebase";
 import { collection, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { AppCard } from "@/components/app-card";
 import { uploadToGithubRelease } from "@/lib/github-actions";
-import { adminAutoGenerateAppDescription, AdminAutoGenerateAppDescriptionOutput } from "@/ai/flows/admin-auto-generate-app-description";
+import { 
+  adminAutoGenerateAppDescription, 
+  AdminAutoGenerateAppDescriptionOutput,
+  checkAiHealth 
+} from "@/ai/flows/admin-auto-generate-app-description";
 
 const CATEGORIES = ["Games", "Tools", "Social", "Entertainment", "Education", "Lifestyle", "Productivity"];
 
@@ -50,8 +57,10 @@ function AddOrUpdateAppForm() {
   const [iconPreview, setIconPreview] = useState<string>("");
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
   
-  // AI Generation States
+  // AI & Connection States
   const [aiResult, setAiResult] = useState<AdminAutoGenerateAppDescriptionOutput | null>(null);
+  const [apiStatus, setApiStatus] = useState<'idle' | 'connected' | 'invalid_key' | 'quota_exceeded' | 'unavailable'>('idle');
+  const [statusMessage, setStatusMessage] = useState<string>("Handshake Required");
   const [copied, setCopied] = useState(false);
 
   const router = useRouter();
@@ -134,6 +143,34 @@ function AddOrUpdateAppForm() {
     }
   };
 
+  const testConnection = async () => {
+    setApiStatus('idle');
+    setStatusMessage("Validating Gateway...");
+    try {
+      const { status, message } = await checkAiHealth();
+      setApiStatus(status);
+      setStatusMessage(message);
+      if (status === 'connected') {
+        toast({ title: "Hub Secure", description: "AI Node connectivity verified." });
+      } else {
+        toast({ title: "Protocol Fault", description: message, variant: "destructive" });
+      }
+    } catch (e) {
+      setApiStatus('unavailable');
+      setStatusMessage("Service Unreachable");
+    }
+  };
+
+  const generateFallback = () => {
+    const fallback: AdminAutoGenerateAppDescriptionOutput = {
+      fullDescription: `Overview:\n${formData.appName} is a powerful application in the ${formData.category} category.\n\nFeatures:\n• Easy to use\n• Fast performance\n• Modern interface\n\nDeveloper: ${formData.developer}\nVersion: ${formData.version}`,
+      seoSummary: `${formData.appName} v${formData.version} - Professional APK from PaliaAPK Hub.`,
+      versionChangelog: `Version ${formData.version} stability updates and performance optimizations.`
+    };
+    setAiResult(fallback);
+    toast({ title: "Fallback Triggered", description: "AI was unavailable; tactical template generated instead." });
+  };
+
   const handleAiGeneration = async () => {
     if (!formData.appName || !formData.version) {
       toast({ title: "Identification Required", description: "Enter App Name and Version for AI context.", variant: "destructive" });
@@ -150,9 +187,19 @@ function AddOrUpdateAppForm() {
         keywords: `${formData.appName}, APK, Hub, Android, ${formData.category}`
       });
       setAiResult(result);
+      setApiStatus('connected');
+      setStatusMessage("Node: Online");
       toast({ title: "AI Assistant Ready", description: "Description protocols generated successfully." });
     } catch (e: any) {
-      toast({ title: "Protocol Fault", description: e.message || "AI service temporarily unavailable.", variant: "destructive" });
+      console.error("AI Node Failure:", e.message);
+      // Map error types for status display
+      if (e.message.includes('AUTH_FAULT')) setApiStatus('invalid_key');
+      else if (e.message.includes('QUOTA_FAULT')) setApiStatus('quota_exceeded');
+      else setApiStatus('unavailable');
+      
+      setStatusMessage(e.message || "AI service temporarily unavailable.");
+      toast({ title: "AI Service Fault", description: "Generating tactical fallback content...", variant: "destructive" });
+      generateFallback();
     } finally {
       setAiLoading(false);
     }
@@ -166,7 +213,7 @@ function AddOrUpdateAppForm() {
       whatsNew: aiResult.versionChangelog
     }));
     setAiResult(null);
-    toast({ title: "Content Applied", description: "AI-generated description is now in the editor." });
+    toast({ title: "Content Applied", description: "Hub description updated with generated text." });
   };
 
   const copyToClipboard = async (text: string) => {
@@ -394,10 +441,33 @@ function AddOrUpdateAppForm() {
 
               {/* 3. Hub Description Section */}
               <div className="space-y-8 bg-white p-10 rounded-[3rem] border border-gray-100">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
                     <FileText className="h-4 w-4" /> Hub Description
                   </h3>
+                  
+                  {/* API Health Diagnostic */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
+                      <div className={`h-2 w-2 rounded-full animate-pulse ${
+                        apiStatus === 'connected' ? 'bg-emerald-500' : 
+                        apiStatus === 'idle' ? 'bg-amber-500' : 'bg-red-500'
+                      }`} />
+                      <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+                        AI Status: {statusMessage}
+                      </span>
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={testConnection}
+                      className="h-8 rounded-full px-4 text-[8px] font-black uppercase tracking-widest hover:bg-primary/5"
+                    >
+                      <Activity className="h-3 w-3 mr-2" /> Test
+                    </Button>
+                  </div>
+
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -421,7 +491,9 @@ function AddOrUpdateAppForm() {
                 {aiResult && !aiLoading && (
                   <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 bg-emerald-50/30 p-8 rounded-[2rem] border border-emerald-100">
                     <div className="flex items-center justify-between">
-                      <Badge className="bg-emerald-500 font-black text-[8px] uppercase tracking-widest">AI Generated Optimization</Badge>
+                      <Badge className="bg-emerald-500 font-black text-[8px] uppercase tracking-widest">
+                        {apiStatus === 'connected' ? 'AI Generated Optimization' : 'Tactical Fallback Template'}
+                      </Badge>
                       <Button type="button" variant="ghost" size="icon" onClick={() => copyToClipboard(aiResult.fullDescription)} className="h-8 w-8">
                         {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                       </Button>
