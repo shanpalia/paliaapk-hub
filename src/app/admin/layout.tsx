@@ -21,7 +21,7 @@ import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { toast } from "@/hooks/use-toast";
 
 const TEST_ADMIN_EMAIL = "shanpalia786@gmail.com";
-const AUTH_TIMEOUT_MS = 10000; // 10 second timeout
+const AUTH_TIMEOUT_MS = 10000; 
 
 export default function AdminLayout({
   children,
@@ -36,19 +36,24 @@ export default function AdminLayout({
   const [timedOut, setTimedOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    console.log("Admin Layout: Initiating Clearance Check...", { userLoading, email: currentUser?.email });
+  // Clearance Bypass for Login Terminal
+  const isLoginPage = pathname === "/admin/login";
 
-    // Start a watchdog timer to prevent infinite loading
+  useEffect(() => {
+    if (isLoginPage) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      return;
+    }
+
+    // Initialize Security Watchdog
     timeoutRef.current = setTimeout(() => {
       if (isAdmin === null) {
-        console.error("Admin Layout: Clearance Protocol Timed Out.");
         setTimedOut(true);
         setIsAdmin(false);
         toast({
           variant: "destructive",
           title: "Clearance Timeout",
-          description: "Verification took too long. Please sign in again."
+          description: "Security handshake took too long. Returning to login."
         });
         router.push("/admin/login");
       }
@@ -57,14 +62,13 @@ export default function AdminLayout({
     async function checkClearance() {
       if (!userLoading) {
         if (!currentUser) {
-          console.log("Admin Layout: No session found. Redirecting to login.");
           setIsAdmin(false);
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
           router.push("/admin/login");
           return;
         }
 
         if (currentUser.email === TEST_ADMIN_EMAIL) {
-          console.log("Admin Layout: Hardcoded admin verified.");
           setIsAdmin(true);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
           return;
@@ -74,17 +78,14 @@ export default function AdminLayout({
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists() && userDoc.data()?.role === "admin") {
-            console.log("Admin Layout: Firestore admin role verified.");
             setIsAdmin(true);
           } else {
-            console.warn("Admin Layout: Insufficient clearance. Redirecting home.");
             setIsAdmin(false);
             router.push("/");
           }
         } catch (e) {
-          console.error("Admin Layout: Critical fault during clearance verification.", e);
           setIsAdmin(false);
-          router.push("/");
+          router.push("/admin/login");
         } finally {
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
         }
@@ -96,19 +97,29 @@ export default function AdminLayout({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [currentUser, userLoading, router]);
+  }, [currentUser, userLoading, router, isLoginPage, isAdmin]);
 
   const handleLogout = async () => {
     if (!auth) return;
     try {
       await auth.signOut();
-      console.log("Admin Layout: Session terminated.");
       router.push("/");
     } catch (e) {
       console.error("Admin Layout: Logout fault.", e);
     }
   };
 
+  // Render Login Terminal without sidebar or clearance checks
+  if (isLoginPage) {
+    return (
+      <div className="min-h-screen bg-white">
+        {children}
+        <Toaster />
+      </div>
+    );
+  }
+
+  // Clearance Loading State
   if (userLoading || (isAdmin === null && !timedOut)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-white">
@@ -124,6 +135,7 @@ export default function AdminLayout({
     );
   }
 
+  // Access Denied State
   if (isAdmin === false && !userLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
