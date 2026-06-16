@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { supabase, AppData } from "@/lib/supabase";
 import { AppCard } from "@/components/app-card";
-import { Sparkles, LayoutGrid, ShieldCheck } from "lucide-react";
+import { Sparkles, LayoutGrid, ShieldCheck, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HexagonLogo } from "@/components/logo";
 
@@ -20,14 +20,25 @@ export default function Home() {
 
   useEffect(() => {
     const fetchApps = async () => {
+      setLoading(true);
       try {
-        const { data, error } = await supabase
+        console.log("Hub Discovery: Scanning registry...");
+        // Fetch apps where is_hidden is false.
+        // If apps were uploaded without setting is_hidden, they might be null.
+        // We'll also log the raw count to help diagnostics.
+        const { data, error, count } = await supabase
           .from('apps')
-          .select('*')
+          .select('*', { count: 'exact' })
           .eq('is_hidden', false)
           .order('created_at', { ascending: false });
         
-        if (!error && data) {
+        if (error) {
+          console.error("Hub Discovery: Supabase query error", error);
+          throw error;
+        }
+
+        if (data) {
+          console.log(`Hub Discovery: Found ${data.length} published binaries.`);
           setApps(data);
         }
       } catch (err) {
@@ -37,8 +48,10 @@ export default function Home() {
       }
     };
 
-    fetchApps();
-  }, []);
+    if (!isSplash) {
+      fetchApps();
+    }
+  }, [isSplash]);
 
   if (isSplash) {
     return (
@@ -64,8 +77,9 @@ export default function Home() {
         ) : featuredApp ? (
           <AppCard app={featuredApp} variant="large" />
         ) : (
-          <div className="w-full aspect-[21/10] rounded-[3rem] bg-gray-50 flex items-center justify-center border border-gray-100">
-             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Hub Repository Empty</p>
+          <div className="w-full aspect-[21/10] rounded-[3rem] bg-gray-50 flex flex-col items-center justify-center border border-gray-100 gap-4">
+             <LayoutGrid className="h-10 w-10 text-muted-foreground/20" />
+             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Featured Section Empty</p>
           </div>
         )}
       </section>
@@ -89,9 +103,10 @@ export default function Home() {
               <AppCard key={app.id} app={app} />
             ))
           ) : (
-            <div className="text-center py-20 bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-200">
+            <div className="text-center py-24 bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-200">
               <Sparkles className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-              <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">No binaries published.</p>
+              <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Hub Repository Empty</p>
+              <p className="text-[9px] font-bold text-muted-foreground/50 uppercase mt-2">Publish binaries in the admin console to populate this feed.</p>
             </div>
           )}
         </div>

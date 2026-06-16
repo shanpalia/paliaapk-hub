@@ -9,13 +9,18 @@ import {
   Sparkles,
   Settings as SettingsIcon,
   ArrowRight,
-  Database
+  Database,
+  ShieldCheck,
+  RefreshCw,
+  Loader2,
+  CheckCircle2
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase, AppData, UserProfile } from "@/lib/supabase";
+import { toast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -23,28 +28,71 @@ export default function AdminDashboard() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+
+  const fetchData = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setCurrentUser(session?.user ?? null);
+
+    const [appsRes, usersRes] = await Promise.all([
+      supabase.from('apps').select('*'),
+      supabase.from('users').select('*')
+    ]);
+
+    if (appsRes.data) {
+      console.log(`Hub Diagnostic: Found ${appsRes.data.length} binaries in registry.`);
+      setApps(appsRes.data);
+    }
+    if (usersRes.data) setUsers(usersRes.data);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setCurrentUser(session?.user ?? null);
-
-      const [appsRes, usersRes] = await Promise.all([
-        supabase.from('apps').select('*'),
-        supabase.from('users').select('*')
-      ]);
-
-      if (appsRes.data) setApps(appsRes.data);
-      if (usersRes.data) setUsers(usersRes.data);
-      setLoading(false);
-    };
-
     fetchData();
   }, []);
 
+  const handleSeedData = async () => {
+    setSeeding(true);
+    const testApp = {
+      app_name: "Hub Diagnostics Tool",
+      version: "1.0.0",
+      description: "Automated test entry to verify storefront distribution protocols.",
+      category: "Tools",
+      developer: "PaliaAPK Hub Node",
+      icon_url: "https://picsum.photos/seed/testicon/256/256",
+      apk_url: "https://example.com/test.apk",
+      downloads: 0,
+      is_hidden: false,
+      is_featured: false,
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      const { data, error } = await supabase.from('apps').insert([testApp]);
+      if (error) throw error;
+      
+      console.log("Hub Diagnostic: Seed successful.");
+      toast({ 
+        title: "Seed Protocol Complete", 
+        description: "Test entry injected. Verify your Home feed now.",
+        className: "bg-emerald-500 text-white font-black"
+      });
+      fetchData();
+    } catch (err: any) {
+      console.error("Hub Diagnostic: Seed failure", err);
+      toast({ 
+        variant: "destructive", 
+        title: "Seed Failure", 
+        description: err.message 
+      });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const stats = [
     { label: "Total Binaries", val: apps.length, icon: Package, color: "bg-blue-50/50 text-blue-600" },
-    { label: "Client Nodes", val: users.length, icon: Users, color: "bg-emerald-50/50 text-emerald-600" },
+    { label: "Published Nodes", val: apps.filter(a => !a.is_hidden).length, icon: CheckCircle2, color: "bg-emerald-50/50 text-emerald-600" },
     { label: "Hub Traffic", val: apps.reduce((acc, a) => acc + (a.downloads || 0), 0).toLocaleString(), icon: Activity, color: "bg-orange-50/50 text-orange-600" },
     { label: "Featured Assets", val: apps.filter(a => a.is_featured).length, icon: Sparkles, color: "bg-indigo-50/50 text-indigo-600" }
   ];
@@ -58,11 +106,25 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-12 animate-in fade-in duration-700">
-      <div>
-        <h1 className="text-5xl font-black font-headline tracking-tighter uppercase">Command Center</h1>
-        <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-primary/10 w-fit px-4 py-1.5 rounded-full">
-          Authenticated Hub Admin: {currentUser?.email || "System"}
-        </p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-5xl font-black font-headline tracking-tighter uppercase">Command Center</h1>
+          <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-primary/10 w-fit px-4 py-1.5 rounded-full">
+            Authenticated Hub Admin: {currentUser?.email || "System"}
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSeedData} 
+            disabled={seeding}
+            className="rounded-full h-10 px-6 font-black text-[10px] uppercase border-gray-200"
+          >
+            {seeding ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <RefreshCw className="h-3 w-3 mr-2" />}
+            Force Seed Test entry
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

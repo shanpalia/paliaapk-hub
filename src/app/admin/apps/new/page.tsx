@@ -205,7 +205,7 @@ function AddOrUpdateAppForm() {
       }
 
       setCurrentPhase("Finalizing Registry...");
-      const payload = {
+      const payload: any = {
         app_name: formData.appName,
         description: formData.description,
         version: formData.version,
@@ -218,9 +218,15 @@ function AddOrUpdateAppForm() {
         icon_url: finalIconUrl,
         apk_url: finalApkUrl,
         screenshot_url: finalScreenshotUrl,
-        downloads: editingId ? undefined : 0,
-        is_hidden: false
+        is_hidden: false // Explicitly set to false to show on home feed
       };
+
+      if (!editingId) {
+        payload.downloads = 0;
+        payload.created_at = new Date().toISOString();
+      }
+
+      console.log("Hub Distribution: Committing to registry...", payload);
 
       if (editingId) {
         const { error } = await supabase.from('apps').update(payload).eq('id', editingId);
@@ -231,8 +237,11 @@ function AddOrUpdateAppForm() {
         if (error) throw error;
         toast({ title: "Published to Store" });
       }
+      
+      console.log("Hub Distribution: Success.");
       router.push("/admin/apps");
     } catch (error: any) {
+      console.error("Hub Distribution Protocol Fault:", error);
       toast({ title: "Protocol Fault", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
