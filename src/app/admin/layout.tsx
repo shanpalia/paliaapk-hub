@@ -9,16 +9,19 @@ import {
   Package, 
   Settings as SettingsIcon,
   LogOut,
-  Loader2
+  Loader2,
+  ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { HexagonLogo } from "@/components/logo";
 import { useAuth, useUser } from "@/firebase";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { toast } from "@/hooks/use-toast";
 
 const TEST_ADMIN_EMAIL = "shanpalia786@gmail.com";
+const AUTH_TIMEOUT_MS = 10000; // 10 second timeout
 
 export default function AdminLayout({
   children,
@@ -30,47 +33,104 @@ export default function AdminLayout({
   const auth = useAuth();
   const { user: currentUser, loading: userLoading } = useUser();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    console.log("Admin Layout: Initiating Clearance Check...", { userLoading, email: currentUser?.email });
+
+    // Start a watchdog timer to prevent infinite loading
+    timeoutRef.current = setTimeout(() => {
+      if (isAdmin === null) {
+        console.error("Admin Layout: Clearance Protocol Timed Out.");
+        setTimedOut(true);
+        setIsAdmin(false);
+        toast({
+          variant: "destructive",
+          title: "Clearance Timeout",
+          description: "Verification took too long. Please sign in again."
+        });
+        router.push("/admin/login");
+      }
+    }, AUTH_TIMEOUT_MS);
+
     async function checkClearance() {
       if (!userLoading) {
         if (!currentUser) {
+          console.log("Admin Layout: No session found. Redirecting to login.");
+          setIsAdmin(false);
           router.push("/admin/login");
           return;
         }
+
         if (currentUser.email === TEST_ADMIN_EMAIL) {
+          console.log("Admin Layout: Hardcoded admin verified.");
           setIsAdmin(true);
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
           return;
         }
+
         const db = getFirestore();
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists() && userDoc.data()?.role === "admin") {
+            console.log("Admin Layout: Firestore admin role verified.");
             setIsAdmin(true);
           } else {
+            console.warn("Admin Layout: Insufficient clearance. Redirecting home.");
             setIsAdmin(false);
             router.push("/");
           }
         } catch (e) {
+          console.error("Admin Layout: Critical fault during clearance verification.", e);
           setIsAdmin(false);
           router.push("/");
+        } finally {
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
         }
       }
     }
+
     checkClearance();
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [currentUser, userLoading, router]);
 
   const handleLogout = async () => {
     if (!auth) return;
-    await auth.signOut();
-    router.push("/");
+    try {
+      await auth.signOut();
+      console.log("Admin Layout: Session terminated.");
+      router.push("/");
+    } catch (e) {
+      console.error("Admin Layout: Logout fault.", e);
+    }
   };
 
-  if (userLoading || isAdmin === null) {
+  if (userLoading || (isAdmin === null && !timedOut)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-white">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="font-black text-muted-foreground uppercase tracking-[0.3em] text-[10px]">Verifying Clearance Protocol...</p>
+        <div className="relative">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+          <HexagonLogo className="h-8 w-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
+        </div>
+        <div className="text-center space-y-2">
+          <p className="font-black text-muted-foreground uppercase tracking-[0.3em] text-[10px]">Verifying Clearance Protocol...</p>
+          <p className="text-[8px] font-bold text-muted-foreground/40 uppercase">Global Hub Infrastructure v3.0</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAdmin === false && !userLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert className="h-16 w-16 text-destructive mb-4" />
+        <h1 className="text-2xl font-black uppercase tracking-tight">Access Prohibited</h1>
+        <p className="text-muted-foreground max-w-xs mt-2">Your identity does not hold administrative clearance for this terminal node.</p>
+        <Button onClick={() => router.push("/")} className="mt-8 rounded-full h-12 px-8 font-black uppercase tracking-widest">Return to Hub</Button>
       </div>
     );
   }
@@ -87,8 +147,8 @@ export default function AdminLayout({
     <div className="flex min-h-screen bg-white">
       {/* Sidebar Navigation */}
       <aside className="hidden lg:flex w-72 flex-col border-r border-gray-100 p-8 space-y-12 shadow-sm bg-white sticky top-0 h-screen">
-        <div className="flex items-center gap-4 px-2" onClick={() => router.push('/admin/dashboard')}>
-          <HexagonLogo className="h-10 w-10 cursor-pointer" />
+        <div className="flex items-center gap-4 px-2 cursor-pointer" onClick={() => router.push('/admin/dashboard')}>
+          <HexagonLogo className="h-10 w-10" />
           <div className="flex flex-col">
             <span className="text-lg font-black tracking-tighter">Hub Admin</span>
             <span className="text-[8px] font-black uppercase text-primary tracking-widest">PaliaAPK Network</span>

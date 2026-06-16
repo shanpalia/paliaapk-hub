@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bell, ShieldCheck } from "lucide-react";
+import { Search, Bell, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { HexagonLogo } from "@/components/logo";
@@ -28,6 +29,8 @@ export function TopHeader() {
       const newCount = tapCount + 1;
       setTapCount(newCount);
       
+      console.log(`Security: Hidden Trigger Step ${newCount}/5`);
+
       if (newCount > 1 && newCount < 5) {
         toast({
           title: "Clearance Check",
@@ -37,6 +40,7 @@ export function TopHeader() {
       }
 
       if (newCount >= 5) {
+        console.log("Security: Admin Terminal Requested. Prompting PIN.");
         setTapCount(0);
         setShowPinDialog(true);
       }
@@ -48,7 +52,10 @@ export function TopHeader() {
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Security: Validating Admin PIN...");
+    
     if (pin === "7227") {
+      console.log("Security: PIN VALID. Authorized for login gateway.");
       setShowPinDialog(false);
       setPin("");
       toast({
@@ -58,6 +65,7 @@ export function TopHeader() {
       });
       router.push("/admin/login");
     } else {
+      console.error("Security: INVALID PIN ATTEMPT.");
       toast({
         title: "Access Denied",
         description: "Invalid Hub Security Key.",

@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, ArrowLeft, Mail, Lock, Loader2, AlertCircle, UserCheck, ShieldAlert } from "lucide-react";
+import { ShieldCheck, ArrowLeft, Mail, Lock, Loader2, UserCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useAuth, useFirestore } from "@/firebase";
 import { HexagonLogo } from "@/components/logo";
@@ -28,72 +28,68 @@ export default function AdminLoginPage() {
   const auth = useAuth();
   const db = useFirestore();
 
-  // Diagnostic: Log environment status
   useEffect(() => {
-    console.log("Infrastructure Node Init: Checking Firebase Environment...");
-    const configKeys = [
-      'NEXT_PUBLIC_FIREBASE_API_KEY',
-      'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-      'NEXT_PUBLIC_FIREBASE_APP_ID'
-    ];
-    configKeys.forEach(key => {
-      const val = process.env[key];
-      console.log(`${key}: ${val ? 'LOADED' : 'MISSING'}`);
-    });
+    console.log("Admin Login: Terminal Ready.");
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
     setVerifyingUser(null);
-    if (!auth || !db) return;
+    
+    if (!auth || !db) {
+      const msg = "Infrastructure node offline. Firebase not initialized.";
+      setAuthError(msg);
+      console.error(msg);
+      return;
+    }
 
     setLoading(true);
+    console.log("Admin Login: Initiating handshake for", email);
+    
     try {
-      console.log("Auth Protocol: Initiating handshake for", email);
-      
       // 1. Authenticate with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      console.log("Auth Protocol: Successful handshake. UID:", user.uid);
+      console.log("Admin Login: Auth handshake successful. UID:", user.uid);
       
       // 2. Fetch Clearance Role from Firestore
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
-      const role = userDoc.exists() ? userDoc.data()?.role : "none";
-      console.log("USER UID:", user.uid);
-console.log("USER EMAIL:", user.email);
-console.log("USER ROLE:", role);
-
+      const role = userDoc.exists() ? userDoc.data()?.role : "user";
+      
       setVerifyingUser({ email: user.email || "Anonymous", role });
 
-      // 3. Logic Check
-      if (user.email?.toLowerCase() === "shanpalia786@gmail.com") {
-        console.log("Access Protocol: Clearance Level VERIFIED.");
+      // 3. Admin Clearance Logic
+      if (user.email?.toLowerCase() === TEST_ADMIN_EMAIL || role === "admin") {
+        console.log("Admin Login: Clearance Level VERIFIED.");
         toast({ 
           title: "Access Authorized", 
-          description: `Welcome, ${user.email}. Level: ${role}`,
+          description: `Welcome. Clearance Level: ${role === 'admin' ? 'ROOT' : 'IDENTIFIED'}`,
           className: "bg-emerald-500 text-white font-black" 
         });
         
-        // Brief delay to allow the user to see their verified role
         setTimeout(() => {
           router.push("/admin/dashboard");
         }, 1500);
       } else {
-        const errorMsg = `Access Denied: Role [${role}] is insufficient for hub terminal access.`;
+        const errorMsg = "Access Denied: Insufficient clearance for administrative terminal.";
         console.error(errorMsg);
         setAuthError(errorMsg);
         toast({ title: "Insufficient Clearance", description: errorMsg, variant: "destructive" });
         await signOut(auth);
       }
     } catch (error: any) {
-      console.error("Critical Auth Error:", error.code, error.message);
-      setAuthError(`${error.code}: ${error.message}`);
+      console.error("Admin Login: Critical Fault.", error.code, error.message);
+      let friendlyMessage = error.message;
+      if (error.code === 'auth/invalid-credential') friendlyMessage = "Invalid administrative credentials.";
+      if (error.code === 'auth/user-not-found') friendlyMessage = "Entity not found in hub database.";
+      
+      setAuthError(friendlyMessage);
       toast({ 
         title: "Protocol Fault", 
-        description: error.message, 
+        description: friendlyMessage, 
         variant: "destructive" 
       });
     } finally {
@@ -123,20 +119,20 @@ console.log("USER ROLE:", role);
           <Alert variant="destructive" className="rounded-2xl border-destructive/20 bg-destructive/5 animate-in shake-1">
             <ShieldAlert className="h-4 w-4" />
             <AlertTitle className="font-black text-xs uppercase tracking-widest">Protocol Fault</AlertTitle>
-            <AlertDescription className="text-xs font-mono mt-2 break-all">{authError}</AlertDescription>
+            <AlertDescription className="text-xs font-mono mt-2">{authError}</AlertDescription>
           </Alert>
         )}
 
-        {verifyingUser && (
+        {verifyingUser && !authError && (
           <Alert className="rounded-2xl border-primary/20 bg-primary/5 animate-in zoom-in-95">
             <UserCheck className="h-4 w-4 text-primary" />
-            <AlertTitle className="font-black text-xs uppercase tracking-widest">Identity Linked</AlertTitle>
+            <AlertTitle className="font-black text-xs uppercase tracking-widest text-primary">Identity Verified</AlertTitle>
             <AlertDescription className="mt-3 flex flex-col gap-2">
-              <p className="text-xs font-bold text-muted-foreground">Authenticated: <span className="text-foreground">{verifyingUser.email}</span></p>
+              <p className="text-xs font-bold text-muted-foreground">Linked: <span className="text-foreground">{verifyingUser.email}</span></p>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-muted-foreground">Clearance:</span>
                 <Badge variant="outline" className="font-black text-[9px] uppercase tracking-widest bg-white">
-                  {verifyingUser.role || "UNKNOWN"}
+                  {verifyingUser.role?.toUpperCase() || "PENDING"}
                 </Badge>
               </div>
             </AlertDescription>
@@ -147,7 +143,7 @@ console.log("USER ROLE:", role);
           <CardContent className="p-10">
             <form onSubmit={handleLogin} className="space-y-8">
               <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-4 text-primary">Email Address</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-4 text-primary">Admin Identity</label>
                 <div className="relative group">
                   <Mail className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <Input
@@ -163,7 +159,7 @@ console.log("USER ROLE:", role);
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-4 text-primary">Password</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-4 text-primary">Terminal Key</label>
                 <div className="relative group">
                   <Lock className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <Input
