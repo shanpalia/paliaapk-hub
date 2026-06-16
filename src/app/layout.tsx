@@ -50,7 +50,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className="font-body bg-white pb-24 max-w-screen-md mx-auto min-h-screen border-x border-gray-50 shadow-sm antialiased">
+      <body className="font-body bg-white pb-24 max-w-screen-md mx-auto min-h-screen border-x border-gray-50 shadow-sm antialiased overflow-x-hidden">
         <FirebaseClientProvider>
           <PWAProvider>
             <TopHeader />

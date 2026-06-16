@@ -1,69 +1,49 @@
-# PLKAPK Hub: Android Build & Release Guide
+# PLKAPK Hub: Android APK Build & Release Guide
 
-This document provides step-by-step instructions for generating a production-ready APK/AAB for PLKAPK Hub.
+This document provides definitive instructions for generating a production-ready APK for PLKAPK Hub.
 
-## Prerequisites
+## 1. Prepare Environment
+- **Node.js**: v18+
+- **Android Studio**: Latest (Ladybug+)
+- **JDK**: 17
+- **Android SDK**: API Level 26+ (Supports Android 8.0 through Android 14)
 
-- **Node.js**: v18 or higher.
-- **Android Studio**: Latest version (Ladybug or higher recommended).
-- **Java Development Kit (JDK)**: 17.
-- **Android SDK**: API Level 34+.
-
-## 1. Prepare the Web Assets
-
-Before creating the native project, ensure the latest web build is ready:
-
+## 2. Generate Web Assets
 ```bash
 npm run build
-npm run export
 ```
+This command generates the optimized static files in the `out/` (or `public/`) directory.
 
-## 2. Initialize Native Project & Gradle Wrapper
-
-The Gradle Wrapper (`gradle-wrapper.jar`) is a binary file and is not included in the source code directly. To initialize it and the Android project:
-
+## 3. Sync Native Project
 ```bash
-# This command initializes the android directory and binary wrapper
-npx cap add android
-
-# If the directory already exists, run this to sync and update the wrapper
-npx cap sync
+npx cap sync android
 ```
+This command copies your Next.js build into the Android Studio project.
 
-## 3. Generate APK (Command Line)
-
-After syncing, you can generate the APK directly:
-
+## 4. Build APK (Command Line)
+To build a debug APK instantly:
 ```bash
 cd android
 ./gradlew assembleDebug
 ```
+Output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
-The APK will be located at:
-`android/app/build/outputs/apk/debug/app-debug.apk`
+## 5. Production Release (Signed APK)
+1. Open the `android` folder in **Android Studio**.
+2. Select **Build > Generate Signed Bundle / APK**.
+3. Choose **APK**.
+4. Create/Select your keystore.
+5. Select **Release** variant.
+6. Click **Finish**.
 
-## 4. Configure Signing (Production)
+## 6. Permissions Checklist
+The Hub is pre-configured with:
+- `INTERNET`: For Supabase data/storage.
+- `REQUEST_INSTALL_PACKAGES`: Required to install APKs downloaded from the hub.
+- `READ/WRITE_EXTERNAL_STORAGE`: For binary buffering.
 
-To release on the Play Store or distribute a signed APK:
-
-1. In Android Studio, open the `android` directory.
-2. Go to **Build > Generate Signed Bundle / APK**.
-3. Select **APK** or **Android App Bundle**.
-4. Create a new KeyStore (keep this file safe!).
-5. Enter your alias and password.
-6. Select **Release** build variant.
-
-## 5. Deployment Checklist
-
-- [ ] Verify `com.plkapkhub.store` is the package name.
-- [ ] Ensure Supabase URL/Key are in the production environment.
-- [ ] Test the Admin Login flow on a physical device.
-- [ ] Verify file download permissions in the `AndroidManifest.xml`.
-
-## 6. Common Issues
-
-### "Could not find or load main class org.gradle.wrapper.GradleWrapperMain"
-This occurs when the binary `gradle-wrapper.jar` is missing. Fix this by running `npx cap sync` on your local machine.
-
-### "App not installed"
-Ensure you have uninstalled any previous versions of the app with the same package name but different signing certificates.
+## 7. App Icons & Splash Screens
+To regenerate icons from a single source image:
+```bash
+npx @capacitor/assets generate --android
+```

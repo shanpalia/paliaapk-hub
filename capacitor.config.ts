@@ -16,7 +16,7 @@ const config: CapacitorConfig = {
   },
   android: {
     buildOptions: {
-      releaseType: 'AAB'
+      releaseType: 'APK'
     }
   }
 };

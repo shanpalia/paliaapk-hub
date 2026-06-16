@@ -1,4 +1,3 @@
-
 {
   "name": "plkapk-hub",
   "version": "1.0.0",
@@ -7,7 +6,7 @@
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "NODE_ENV=production next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -15,7 +14,7 @@
     "cap:add": "npx cap add android",
     "cap:sync": "npx cap sync",
     "cap:open": "npx cap open android",
-    "build:android": "npm run build && (npx cap add android || true) && npx cap sync",
+    "build:android": "npm run build && npx cap sync",
     "export:project": "node scripts/export-project.js",
     "android:wrapper": "cd android && gradle wrapper --gradle-version 7.5"
   },
