@@ -8,7 +8,8 @@ import {
   Activity,
   Sparkles,
   Settings as SettingsIcon,
-  ArrowRight
+  ArrowRight,
+  Database
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function AdminDashboard() {
   ];
 
   const quickActions = [
-    { label: "Publish New", desc: "Deploy binary to Global CDN", icon: PlusCircle, href: "/admin/apps/new", color: "text-blue-500", bg: "bg-blue-50" },
+    { label: "Publish New", desc: "Instantly deploy to Hub Storage", icon: PlusCircle, href: "/admin/apps/new", color: "text-blue-500", bg: "bg-blue-50" },
     { label: "Manage Hub", desc: "Edit or decommission entries", icon: Package, href: "/admin/apps", color: "text-emerald-500", bg: "bg-emerald-50" },
     { label: "Clearance", desc: "Security role management", icon: Users, href: "/admin/users", color: "text-orange-500", bg: "bg-orange-50" },
     { label: "System Config", desc: "Infrastructure node settings", icon: SettingsIcon, href: "/admin/settings", color: "text-indigo-500", bg: "bg-indigo-50" }
@@ -60,7 +61,7 @@ export default function AdminDashboard() {
       <div>
         <h1 className="text-5xl font-black font-headline tracking-tighter uppercase">Command Center</h1>
         <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-primary/10 w-fit px-4 py-1.5 rounded-full">
-          Authenticated Node: {currentUser?.email || "System"}
+          Authenticated Hub Admin: {currentUser?.email || "System"}
         </p>
       </div>
 
@@ -77,7 +78,7 @@ export default function AdminDashboard() {
       </div>
 
       <section className="space-y-8">
-        <h2 className="text-xs font-black uppercase tracking-[0.3em] text-primary ml-4">Terminal Protocols</h2>
+        <h2 className="text-xs font-black uppercase tracking-[0.3em] text-primary ml-4">Hub Protocols</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {quickActions.map((action, i) => (
             <button
@@ -103,18 +104,18 @@ export default function AdminDashboard() {
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
           <div className="flex items-center gap-10">
             <div className="w-24 h-24 bg-white/10 backdrop-blur-3xl rounded-[2.5rem] flex items-center justify-center shadow-inner">
-              <Activity className="h-12 w-12 text-primary animate-pulse" />
+              <Database className="h-12 w-12 text-primary animate-pulse" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-4xl font-black tracking-tighter uppercase leading-tight">Infrastructure Node<br />Status: Nominal</h3>
-              <p className="text-white/40 text-[11px] font-black uppercase tracking-[0.4em]">Native Supabase Distribution Framework Active</p>
+              <h3 className="text-4xl font-black tracking-tighter uppercase leading-tight">Supabase Protected<br />Distribution Framework</h3>
+              <p className="text-white/40 text-[11px] font-black uppercase tracking-[0.4em]">Native Cloud Hosting Node Active</p>
             </div>
           </div>
           <Button 
             onClick={() => router.push('/admin/apps/new')}
             className="rounded-full px-16 h-20 premium-gradient font-black text-sm uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-3xl shadow-primary/20"
           >
-            Deploy Binary
+            Deploy New Binary
           </Button>
         </div>
       </Card>

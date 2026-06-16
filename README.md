@@ -1,10 +1,11 @@
+
 # PaliaAPK Hub
 
-The premium hub for verified Android binaries and apps. Powered by Next.js 15, Firebase, and GitHub Global Distribution.
+The premium hub for verified Android binaries and apps. Powered by Next.js 15, Supabase, and Capacitor.
 
 ## Features
 
-- **Verified APK Repository**: Fast, secure downloads for Android devices.
+- **Supabase APK Registry**: Instant uploads and real-time distribution.
 - **AI-Powered Copywriting**: Automatic app description generation using Google Gemini.
 - **Administrative Console**: Full management suite for apps, versions, and assets.
 - **Native Android Support**: Built with Capacitor 6 for a seamless mobile experience.
@@ -12,15 +13,19 @@ The premium hub for verified Android binaries and apps. Powered by Next.js 15, F
 ## Technical Stack
 
 - **Framework**: Next.js 15 (App Router)
-- **Database**: Firestore (Real-time updates & increments)
-- **Authentication**: Firebase Auth (Multi-role clearance)
+- **Database**: Supabase PostgreSQL (Real-time updates)
+- **Storage**: Supabase Storage (Fast binary distribution)
+- **Authentication**: Supabase Auth
 - **Styling**: Tailwind CSS + ShadCN UI
 - **PWA**: Fully Integrated Service Workers & Install Prompt
-- **Distribution**: GitHub Release API v3 Automation
 
-## Infrastructure Configuration
+## Deployment
 
-Ensure your `.env` file contains the following keys for binary distribution:
-- `GITHUB_TOKEN`: Your Personal Access Token with `repo` scope.
-- `GITHUB_OWNER`: Your GitHub username.
-- `GITHUB_REPO`: The repository for APK releases (e.g., `paliaapk-releases`).
+PaliaAPK Hub is designed for independent distribution. Apps are hosted on Supabase Storage and served instantly to the storefront.
+
+```bash
+npm run build
+npx cap sync
+```
+
+See the `docs/` folder for more detailed build and maintenance guides.

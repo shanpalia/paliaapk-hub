@@ -7,7 +7,9 @@ import {
   Settings as SettingsIcon,
   Server,
   Key,
-  Globe
+  Globe,
+  Database,
+  Cloud
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,8 +30,8 @@ export default function AdminSettings() {
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 text-primary">
               <ShieldCheck className="h-8 w-8" />
             </div>
-            <CardTitle className="text-2xl font-black font-headline tracking-tighter uppercase">Terminal Security</CardTitle>
-            <CardDescription className="text-xs font-bold">Administrative credentials and hub terminal access keys.</CardDescription>
+            <CardTitle className="text-2xl font-black font-headline tracking-tighter uppercase">Hub Protocol Security</CardTitle>
+            <CardDescription className="text-xs font-bold">Administrative credentials and hub distribution keys.</CardDescription>
           </CardHeader>
           
           <div className="space-y-8">
@@ -41,9 +43,9 @@ export default function AdminSettings() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Distribution Protocol</label>
+                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Distribution Engine</label>
                 <div className="flex items-center h-14 bg-gray-50 rounded-2xl px-6 border-none font-bold text-sm">
-                  GitHub Release API v3
+                  Supabase Cloud Infrastructure
                 </div>
               </div>
             </div>
@@ -53,7 +55,7 @@ export default function AdminSettings() {
               <div>
                 <p className="text-[10px] font-black uppercase text-emerald-700 tracking-widest mb-1">Infrastructure Online</p>
                 <p className="text-[10px] font-medium text-emerald-600 leading-relaxed">
-                  All distribution nodes are operational. High-performance CDN endpoints are active for binary transfer protocols.
+                  All distribution nodes are operational. Supabase S3-compatible storage buckets are active for binary transfer protocols.
                 </p>
               </div>
             </div>
@@ -63,20 +65,20 @@ export default function AdminSettings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="p-8 rounded-[2rem] border-none shadow-sm bg-white flex flex-col gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
-              <Globe className="h-6 w-6" />
+              <Cloud className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-black text-sm uppercase tracking-tight">Hub Domain</h3>
-              <p className="text-[10px] font-bold text-muted-foreground mt-1">paliaapk.hub.terminal</p>
+              <h3 className="font-black text-sm uppercase tracking-tight">Binary Storage</h3>
+              <p className="text-[10px] font-bold text-muted-foreground mt-1">Supabase Storage Buckets</p>
             </div>
           </Card>
           <Card className="p-8 rounded-[2rem] border-none shadow-sm bg-white flex flex-col gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center">
-              <Server className="h-6 w-6" />
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+              <Database className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-black text-sm uppercase tracking-tight">Region Code</h3>
-              <p className="text-[10px] font-bold text-muted-foreground mt-1">US-EAST-GLOBAL-01</p>
+              <h3 className="font-black text-sm uppercase tracking-tight">Hub Registry</h3>
+              <p className="text-[10px] font-bold text-muted-foreground mt-1">PostgreSQL Live Instance</p>
             </div>
           </Card>
         </div>
