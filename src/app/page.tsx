@@ -4,50 +4,62 @@
 import { useState, useEffect } from "react";
 import { supabase, AppData } from "@/lib/supabase";
 import { AppCard } from "@/components/app-card";
-import { Sparkles, LayoutGrid, ShieldCheck, Loader2 } from "lucide-react";
+import { Sparkles, LayoutGrid, ShieldCheck, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HexagonLogo } from "@/components/logo";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [isSplash, setIsSplash] = useState(true);
   const [apps, setApps] = useState<AppData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorInfo, setErrorInfo] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsSplash(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const fetchApps = async () => {
-      setLoading(true);
-      try {
-        console.log("Hub Discovery: Scanning registry...");
-        // Fetch apps where is_hidden is false.
-        // If apps were uploaded without setting is_hidden, they might be null.
-        // We'll also log the raw count to help diagnostics.
-        const { data, error, count } = await supabase
-          .from('apps')
-          .select('*', { count: 'exact' })
-          .eq('is_hidden', false)
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error("Hub Discovery: Supabase query error", error);
-          throw error;
-        }
-
-        if (data) {
-          console.log(`Hub Discovery: Found ${data.length} published binaries.`);
-          setApps(data);
-        }
-      } catch (err) {
-        console.error("Hub Discovery: Repository scan failed", err);
-      } finally {
-        setLoading(false);
+  const fetchApps = async () => {
+    setLoading(true);
+    setErrorInfo(null);
+    try {
+      console.log("Hub Discovery: Scanning registry...");
+      
+      // Attempt to fetch apps. We query the table broadly and handle filtering in-memory
+      // to avoid hard SQL errors if the 'is_hidden' column is missing from the schema.
+      const { data, error } = await supabase
+        .from('apps')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        const technicalMsg = error.message || error.details || "Unknown Supabase Protocol Error";
+        console.error("Hub Discovery: Supabase query fault", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        setErrorInfo(technicalMsg);
+        return;
       }
-    };
 
+      if (data) {
+        // Filter hidden apps in-memory to ensure UI resilience
+        const publishedApps = data.filter(app => app.is_hidden !== true);
+        console.log(`Hub Discovery: Found ${publishedApps.length} published binaries.`);
+        setApps(publishedApps);
+      }
+    } catch (err: any) {
+      console.error("Hub Discovery: Critical repository scan failed", err);
+      setErrorInfo(err.message || "Critical Discovery Failure");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (!isSplash) {
       fetchApps();
     }
@@ -95,6 +107,26 @@ export default function Home() {
           </div>
         </div>
 
+        {errorInfo && (
+          <div className="mx-4 p-8 bg-red-50 border border-red-100 rounded-[2.5rem] space-y-4 animate-in shake-1">
+            <div className="flex items-center gap-3 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              <p className="text-xs font-black uppercase tracking-widest">Discovery Protocol Fault</p>
+            </div>
+            <p className="text-[10px] font-mono text-red-500 break-all bg-white/60 p-4 rounded-2xl border border-red-100/50 leading-relaxed">
+              {errorInfo}
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchApps} 
+              className="rounded-full h-10 px-6 font-black text-[10px] uppercase border-red-200 text-red-600 hover:bg-red-100 transition-colors"
+            >
+               <RefreshCw className="h-3 w-3 mr-2" /> Restart Discovery Scan
+            </Button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-6 px-2">
           {loading ? (
             [1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full rounded-[2.5rem]" />)
@@ -102,13 +134,13 @@ export default function Home() {
             apps.map((app) => (
               <AppCard key={app.id} app={app} />
             ))
-          ) : (
+          ) : !errorInfo ? (
             <div className="text-center py-24 bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-200">
               <Sparkles className="h-12 w-12 text-gray-200 mx-auto mb-4" />
               <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Hub Repository Empty</p>
               <p className="text-[9px] font-bold text-muted-foreground/50 uppercase mt-2">Publish binaries in the admin console to populate this feed.</p>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 

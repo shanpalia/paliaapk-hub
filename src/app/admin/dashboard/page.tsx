@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   RefreshCw,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,22 +30,36 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    setCurrentUser(session?.user ?? null);
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUser(session?.user ?? null);
 
-    const [appsRes, usersRes] = await Promise.all([
-      supabase.from('apps').select('*'),
-      supabase.from('users').select('*')
-    ]);
+      const [appsRes, usersRes] = await Promise.all([
+        supabase.from('apps').select('*'),
+        supabase.from('users').select('*')
+      ]);
 
-    if (appsRes.data) {
-      console.log(`Hub Diagnostic: Found ${appsRes.data.length} binaries in registry.`);
-      setApps(appsRes.data);
+      if (appsRes.error) throw appsRes.error;
+      if (usersRes.error) {
+        console.warn("User Registry scan returned a non-critical error", usersRes.error);
+      }
+
+      if (appsRes.data) {
+        console.log(`Hub Diagnostic: Found ${appsRes.data.length} binaries in registry.`);
+        setApps(appsRes.data);
+      }
+      if (usersRes.data) setUsers(usersRes.data);
+    } catch (err: any) {
+      console.error("Hub Diagnostic: Registry handshake failure", err);
+      setError(err.message || "Failed to sync with Supabase Registry Node");
+    } finally {
+      setLoading(false);
     }
-    if (usersRes.data) setUsers(usersRes.data);
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -68,7 +83,7 @@ export default function AdminDashboard() {
     };
 
     try {
-      const { data, error } = await supabase.from('apps').insert([testApp]);
+      const { error } = await supabase.from('apps').insert([testApp]);
       if (error) throw error;
       
       console.log("Hub Diagnostic: Seed successful.");
@@ -127,13 +142,28 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {error && (
+        <div className="p-8 bg-red-50 border border-red-100 rounded-[3rem] flex items-center gap-6 animate-in slide-in-from-top-4">
+          <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
+            <AlertCircle className="h-8 w-8 text-red-600" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <h3 className="text-sm font-black uppercase tracking-widest text-red-700">Registry Synchronization Fault</h3>
+            <p className="text-xs font-medium text-red-600/70">{error}</p>
+          </div>
+          <Button onClick={fetchData} variant="ghost" className="rounded-full h-12 w-12 hover:bg-red-100">
+            <RefreshCw className="h-5 w-5 text-red-600" />
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
           <Card key={i} className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 transition-transform hover:scale-[1.02]">
             <div className={`w-14 h-14 rounded-2xl ${stat.color} flex items-center justify-center mb-6`}>
               <stat.icon className="h-7 w-7" />
             </div>
-            <h3 className="text-4xl font-black font-headline tracking-tighter">{stat.val}</h3>
+            <h3 className="text-4xl font-black font-headline tracking-tighter">{loading ? "..." : stat.val}</h3>
             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-2">{stat.label}</p>
           </Card>
         ))}
