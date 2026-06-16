@@ -1,19 +1,32 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
-import { BottomNavigation } from "@/components/BottomNavigation";
+import { TopHeader } from '@/components/layout/top-header';
+import { BottomNav } from '@/components/layout/bottom-nav';
+import { Toaster } from '@/components/ui/toaster';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { PWAProvider } from './pwa-provider';
+import { PWAInstallBanner } from '@/components/pwa-install-banner';
 
 export const metadata: Metadata = {
-  title: 'PLKAPK Hub | The Ultimate Android App Marketplace',
-  description: 'Discover and download verified Android APKs for your device.',
+  title: 'PaliaAPK Hub - Premium Android App Store',
+  description: 'Download the latest verified APKs and games securely on PaliaAPK Hub.',
+  applicationName: 'PaliaAPK Hub',
   appleWebApp: {
-    title: 'PLKAPK Hub',
-    statusBarStyle: 'default',
     capable: true,
+    statusBarStyle: 'default',
+    title: 'PaliaAPK Hub',
   },
+  formatDetection: {
+    telephone: false,
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-touch-fullscreen': 'yes',
+  }
 };
 
 export const viewport: Viewport = {
+  themeColor: '#00d2ff',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -27,20 +40,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className="font-body antialiased min-h-screen selection:bg-primary/20 selection:text-primary pb-safe lg:pb-0 bg-background overflow-x-hidden">
-        <div className="flex flex-col min-h-screen">
-          <div className="flex-1">
-            {children}
-          </div>
-        </div>
-        <BottomNavigation />
-        <Toaster />
+      <body className="font-body bg-white pb-24 max-w-screen-md mx-auto min-h-screen border-x border-gray-50 shadow-sm antialiased">
+        <FirebaseClientProvider>
+          <PWAProvider>
+            <TopHeader />
+            <main className="px-4 py-4 sm:px-6 md:px-8">
+              {children}
+            </main>
+            <BottomNav />
+            <PWAInstallBanner />
+            <Toaster />
+          </PWAProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );

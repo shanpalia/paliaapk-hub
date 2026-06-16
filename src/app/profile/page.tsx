@@ -1,134 +1,190 @@
 "use client";
 
-import { Navigation } from "@/components/Navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { User, Mail, Download, LogOut, ChevronRight, ShieldCheck, History, Settings, Star, Cloud } from "lucide-react";
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useUser, useAuth, useFirestore } from "@/firebase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut 
+} from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { LogOut, Package, Shield, Settings, User as UserIcon, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: userLoading } = useUser();
+  const auth = useAuth();
+  const db = useFirestore();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+  const handleAuth = async (type: 'login' | 'signup') => {
+    if (!auth || !db) return;
+    setLoading(true);
+    try {
+      if (type === 'signup') {
+        const res = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", res.user.uid), {
+          uid: res.user.uid,
+          email,
+          displayName,
+          role: 'user',
+          createdAt: new Date().toISOString()
+        });
+        toast({ title: "Hub Access Initialized", description: "Welcome to the PaliaAPK network." });
+        router.push("/");
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        toast({ title: "Identity Verified", description: "Successfully linked to the hub." });
+        router.push("/");
+      }
+    } catch (error: any) {
+      toast({ title: "Verification Failed", description: error.message, variant: "destructive" });
+    } finally {
       setLoading(false);
-    });
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    }
   };
 
-  if (loading) return null;
+  if (userLoading) return (
+    <div className="space-y-6 pt-4">
+      <Skeleton className="h-32 w-full rounded-[2rem]" />
+      <Skeleton className="h-64 w-full rounded-[2rem]" />
+    </div>
+  );
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navigation />
-        <main className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          <div className="h-32 w-32 bg-muted rounded-[2.5rem] flex items-center justify-center mb-8 rotate-3 shadow-xl">
-            <User className="h-16 w-16 text-muted-foreground -rotate-3" />
+      <div className="max-w-md mx-auto pt-6 animate-in fade-in duration-500">
+        <div className="text-center mb-10 space-y-2">
+          <div className="w-20 h-20 bg-primary/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-4 text-primary">
+            <UserIcon className="h-10 w-10" />
           </div>
-          <h1 className="text-4xl font-black mb-4">Join PLKAPK Hub</h1>
-          <p className="text-muted-foreground max-w-xs mb-10 text-lg">Create an account to track downloads, secure your favorite APKs, and get instant updates.</p>
-          <div className="flex flex-col gap-4 w-full max-w-xs">
-            <Link href="/auth/login" className="w-full">
-              <Button className="w-full h-16 rounded-[2rem] text-xl font-black shadow-2xl shadow-primary/20">Sign In</Button>
-            </Link>
-            <Link href="/auth/signup" className="w-full">
-              <Button variant="outline" className="w-full h-16 rounded-[2rem] text-xl font-black">Create Account</Button>
-            </Link>
-          </div>
-        </main>
+          <h1 className="text-3xl font-bold font-headline">Hub Access</h1>
+          <p className="text-muted-foreground">Authenticate to access PaliaAPK verified binaries.</p>
+        </div>
+
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList className="grid grid-cols-2 h-14 rounded-full bg-gray-100/50 p-1 mb-6">
+            <TabsTrigger value="login" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">Sign In</TabsTrigger>
+            <TabsTrigger value="signup" className="rounded-full data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">Sign Up</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="login" className="space-y-4">
+            <Input 
+              placeholder="Hub Email Address" 
+              type="email" 
+              className="h-14 rounded-2xl px-6 bg-gray-50 border-none font-bold"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Input 
+              placeholder="Private Key" 
+              type="password" 
+              className="h-14 rounded-2xl px-6 bg-gray-50 border-none font-bold"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button 
+              className="w-full h-14 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" 
+              disabled={loading}
+              onClick={() => handleAuth('login')}
+            >
+              {loading ? <Loader2 className="animate-spin mr-2" /> : "Verify Identity"}
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="signup" className="space-y-4">
+            <Input 
+              placeholder="Identity Name" 
+              className="h-14 rounded-2xl px-6 bg-gray-50 border-none font-bold"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+            <Input 
+              placeholder="Hub Email Address" 
+              type="email" 
+              className="h-14 rounded-2xl px-6 bg-gray-50 border-none font-bold"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Input 
+              placeholder="Private Key" 
+              type="password" 
+              className="h-14 rounded-2xl px-6 bg-gray-50 border-none font-bold"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button 
+              className="w-full h-14 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" 
+              disabled={loading}
+              onClick={() => handleAuth('signup')}
+            >
+              {loading ? <Loader2 className="animate-spin mr-2" /> : "Initialize Identity"}
+            </Button>
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
 
-  const displayName = user.email?.split('@')[0];
-  const userInitial = user.email?.[0].toUpperCase();
-
   return (
-    <div className="min-h-screen bg-muted/10 pb-20 lg:pb-0">
-      <Navigation />
-      <main className="container mx-auto px-4 py-12 max-w-2xl">
-        <header className="text-center mb-12">
-          <div className="relative h-32 w-32 mx-auto mb-6 group">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all" />
-            <Avatar className="h-32 w-32 border-8 border-white shadow-2xl relative z-10">
-              <AvatarFallback className="bg-primary text-primary-foreground font-black text-5xl">
-                {userInitial}
-              </AvatarFallback>
-            </Avatar>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-center gap-4 bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
+        <div className="w-16 h-16 rounded-[1.5rem] bg-primary flex items-center justify-center text-white text-2xl font-bold">
+          {user.email?.[0].toUpperCase()}
+        </div>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold font-headline">{user.displayName || "Hub Client"}</h1>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
+        </div>
+        <Button variant="ghost" size="icon" className="rounded-2xl hover:bg-red-50" onClick={() => {
+          signOut(auth!);
+          router.push("/");
+        }}>
+          <LogOut className="h-5 w-5 text-destructive" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        <div className="p-6 bg-gray-50 rounded-[2rem] space-y-4">
+          <h2 className="text-sm font-black uppercase tracking-widest text-muted-foreground ml-1">Client Protocol</h2>
+          <div className="space-y-2">
+            <button className="w-full flex items-center justify-between p-4 bg-white rounded-2xl hover:bg-gray-100 transition-colors">
+              <div className="flex items-center gap-3">
+                <Package className="h-5 w-5 text-primary" />
+                <span className="font-bold text-sm">Transfer History</span>
+              </div>
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-md font-bold">0</span>
+            </button>
+            <button className="w-full flex items-center justify-between p-4 bg-white rounded-2xl hover:bg-gray-100 transition-colors">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-green-600" />
+                <span className="font-bold text-sm">Hub Security</span>
+              </div>
+            </button>
+            <button className="w-full flex items-center justify-between p-4 bg-white rounded-2xl hover:bg-gray-100 transition-colors">
+              <div className="flex items-center gap-3">
+                <Settings className="h-5 w-5 text-gray-500" />
+                <span className="font-bold text-sm">System Prefs</span>
+              </div>
+            </button>
           </div>
-          <h1 className="text-3xl font-black tracking-tight">{displayName}</h1>
-          <p className="text-muted-foreground font-bold flex items-center justify-center gap-2 mt-2 bg-white/50 w-fit mx-auto px-4 py-1 rounded-full border border-border/50">
-            <Mail className="h-4 w-4 text-primary" /> {user.email}
-          </p>
-        </header>
-
-        <div className="grid grid-cols-2 gap-4 mb-10">
-          <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-6 text-center">
-            <div className="h-10 w-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center mx-auto mb-2">
-              <Download className="h-5 w-5" />
-            </div>
-            <p className="text-2xl font-black">12</p>
-            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Total Downloads</p>
-          </Card>
-          <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-6 text-center">
-            <div className="h-10 w-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center mx-auto mb-2">
-              <Star className="h-5 w-5 fill-amber-500" />
-            </div>
-            <p className="text-2xl font-black">4</p>
-            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Reviews Sent</p>
-          </Card>
         </div>
 
-        <div className="space-y-4">
-          <Card className="rounded-[2.5rem] border-none shadow-sm overflow-hidden bg-white">
-            <CardContent className="p-0">
-              {[
-                { label: "Download History", icon: History, href: "#", count: "12 Items" },
-                { label: "Cloud Backup", icon: Cloud, href: "#", badge: "New" },
-                { label: "Security Settings", icon: ShieldCheck, href: "#" },
-                { label: "App Preferences", icon: Settings, href: "#" },
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-6 hover:bg-muted/30 transition-colors border-b last:border-none cursor-pointer group">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
-                      <item.icon className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <span className="font-bold block">{item.label}</span>
-                      {item.count && <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{item.count}</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {item.badge && <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{item.badge}</span>}
-                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Button 
-            onClick={handleLogout}
-            variant="ghost" 
-            className="w-full h-16 rounded-[2rem] text-destructive font-black hover:bg-destructive/5 gap-3"
-          >
-            <LogOut className="h-5 w-5" /> Sign Out from Marketplace
-          </Button>
+        <div className="bg-primary/5 rounded-[2.5rem] p-8 text-center space-y-3 border border-primary/10">
+          <h3 className="font-bold text-primary">Support Gateway</h3>
+          <p className="text-xs text-muted-foreground">Contact PaliaAPK Hub infrastructure support for binary issues.</p>
+          <Button variant="outline" className="rounded-full px-8 border-primary/20 hover:bg-primary/10 font-bold transition-all">Open Channel</Button>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

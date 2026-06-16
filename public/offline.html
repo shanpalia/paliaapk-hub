@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Offline - PaliaAPK Hub</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            padding: 24px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .logo-container {
+            position: relative;
+            margin-bottom: 32px;
+        }
+        .logo {
+            width: 96px;
+            height: 96px;
+            background: linear-gradient(135deg, #4facfe 0%, #00d2ff 50%, #92fe9d 100%);
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: 900;
+            box-shadow: 0 20px 40px rgba(0, 210, 255, 0.25);
+            animation: float 4s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+        h1 {
+            font-size: 28px;
+            margin: 0 0 12px 0;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            text-transform: uppercase;
+        }
+        p {
+            color: #666;
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 320px;
+            margin: 0 0 40px 0;
+            font-weight: 500;
+        }
+        .retry-btn {
+            background: #00d2ff;
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
+        }
+        .retry-btn:active {
+            transform: scale(0.95);
+            opacity: 0.9;
+        }
+        .status-badge {
+            margin-top: 40px;
+            padding: 6px 12px;
+            background: #fff1f1;
+            color: #f43f5e;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <div class="logo">S</div>
+    </div>
+    <h1>Terminal Offline</h1>
+    <p>The distribution link to the PaliaAPK Hub network has been severed. Check your signal to resume binary acquisition.</p>
+    <button class="retry-btn" onclick="window.location.reload()">Reconnect Protocol</button>
+    <div class="status-badge">Connection Fault</div>
+</body>
+</html>

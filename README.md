@@ -1,78 +1,26 @@
-# PLKAPK Hub 🚀
+# PaliaAPK Hub
 
-The ultimate, secure Android application marketplace. Built with Next.js, Capacitor, and Supabase.
+The premium hub for verified Android binaries and apps. Powered by Next.js 15, Firebase, and GitHub Global Distribution.
 
-## 📱 Features
+## Features
 
 - **Verified APK Repository**: Fast, secure downloads for Android devices.
 - **AI-Powered Copywriting**: Automatic app description generation using Google Gemini.
 - **Administrative Console**: Full management suite for apps, versions, and assets.
 - **Native Android Support**: Built with Capacitor 6 for a seamless mobile experience.
 
-## 🛠 Tech Stack
+## Technical Stack
 
 - **Framework**: Next.js 15 (App Router)
-- **Styling**: Tailwind CSS + Shadcn UI
-- **Backend**: Supabase (Auth, Database, Storage)
-- **Native**: Capacitor 6
-- **AI**: Genkit + Google Gemini 2.5 Flash
+- **Database**: Firestore (Real-time updates & increments)
+- **Authentication**: Firebase Auth (Multi-role clearance)
+- **Styling**: Tailwind CSS + ShadCN UI
+- **PWA**: Fully Integrated Service Workers & Install Prompt
+- **Distribution**: GitHub Release API v3 Automation
 
-## 📥 How to Download the Project ZIP
+## Infrastructure Configuration
 
-To download the complete source code to your local computer:
-
-1. **Run the Export Script**:
-   ```bash
-   npm run export:project
-   ```
-2. **Download from Sidebar**:
-   - Locate **`plkapk-hub-export.zip`** in the **File Explorer** (the left sidebar of this IDE).
-   - **Right-click** the file.
-   - Select **'Download'** from the context menu.
-
-## 🚀 Getting Started
-
-### 1. Installation
-
-```bash
-npm install
-```
-
-### 2. Environment Setup
-
-Create a `.env.local` file with your Supabase credentials:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-GEMINI_API_KEY=your_google_ai_key
-```
-
-### 3. Native Android Build
-
-After your Nix environment has reloaded with Gradle and JDK 17:
-
-1. **Initialize the Gradle Wrapper**:
-   ```bash
-   npm run android:wrapper
-   ```
-
-2. **Sync the Project**:
-   ```bash
-   npx cap sync
-   ```
-
-3. **Generate the Debug APK**:
-   ```bash
-   cd android
-   ./gradlew assembleDebug
-   ```
-
-The final APK will be located at:
-`android/app/build/outputs/apk/debug/app-debug.apk`
-
----
-
-## 👨‍💻 Developed By
-
-**Shan Palia**
+Ensure your `.env` file contains the following keys for binary distribution:
+- `GITHUB_TOKEN`: Your Personal Access Token with `repo` scope.
+- `GITHUB_OWNER`: Your GitHub username.
+- `GITHUB_REPO`: The repository for APK releases (e.g., `paliaapk-releases`).

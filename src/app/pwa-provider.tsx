@@ -1,0 +1,69 @@
+
+'use client';
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+
+interface PWAContextType {
+  deferredPrompt: any;
+  isInstallable: boolean;
+  installApp: () => void;
+}
+
+const PWAContext = createContext<PWAContextType>({
+  deferredPrompt: null,
+  isInstallable: false,
+  installApp: () => {},
+});
+
+export const usePWA = () => useContext(PWAContext);
+
+export function PWAProvider({ children }: { children: React.ReactNode }) {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  useEffect(() => {
+    // Register Service Worker with Global Scope
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(
+          (registration) => {
+            console.log('SW Protocol: Handshake successful at scope:', registration.scope);
+          },
+          (error) => {
+            console.error('SW Protocol: Handshake failed:', error);
+          }
+        );
+      });
+    }
+
+    // Handle Install Prompt logic
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const installApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('Hub Terminal: User accepted installation.');
+    }
+    setDeferredPrompt(null);
+    setIsInstallable(false);
+  };
+
+  return (
+    <PWAContext.Provider value={{ deferredPrompt, isInstallable, installApp }}>
+      {children}
+    </PWAContext.Provider>
+  );
+}

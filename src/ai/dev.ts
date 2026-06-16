@@ -1,5 +1,4 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/app-description-summarization.ts';
-import '@/ai/flows/generate-app-description.ts';
+import '@/ai/flows/admin-auto-generate-app-description.ts';
