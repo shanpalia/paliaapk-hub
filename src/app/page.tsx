@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from "react";
 import { useCollection, useFirestore } from "@/firebase";
 import { collection, query, where, orderBy } from "firebase/firestore";
@@ -23,7 +25,8 @@ export default function Home() {
     return query(
       collection(db, "apps"), 
       where("status", "==", "published"),
-      where("isHidden", "==", false)
+      where("isHidden", "==", false),
+      orderBy("createdAt", "desc")
     );
   }, [db]);
 

@@ -1,11 +1,22 @@
 {
   "placeholderImages": [
     {
-<<<<<<< HEAD
       "id": "hero-bg",
       "description": "Abstract technological background",
       "imageUrl": "https://picsum.photos/seed/plkhub-hero/1200/600",
       "imageHint": "technology abstract"
+    },
+    {
+      "id": "featured-1",
+      "description": "Premium Hub Featured Banner",
+      "imageUrl": "https://picsum.photos/seed/shanpalia1/1200/600",
+      "imageHint": "tech binary abstract"
+    },
+    {
+      "id": "featured-2",
+      "description": "Mint Gradient Hub Display",
+      "imageUrl": "https://picsum.photos/seed/shanpalia2/1200/600",
+      "imageHint": "modern interface"
     },
     {
       "id": "app-icon-1",
@@ -48,30 +59,6 @@
       "description": "App screenshot 3",
       "imageUrl": "https://picsum.photos/seed/plk-ss3/720/1280",
       "imageHint": "app dashboard"
-=======
-      "id": "featured-1",
-      "description": "Premium Hub Featured Banner",
-      "imageUrl": "https://picsum.photos/seed/shanpalia1/1200/600",
-      "imageHint": "tech binary abstract"
-    },
-    {
-      "id": "featured-2",
-      "description": "Mint Gradient Hub Display",
-      "imageUrl": "https://picsum.photos/seed/shanpalia2/1200/600",
-      "imageHint": "modern interface"
-    },
-    {
-      "id": "app-icon-1",
-      "description": "Premium App Icon",
-      "imageUrl": "https://picsum.photos/seed/sicon1/400/400",
-      "imageHint": "minimalist logo"
-    },
-    {
-      "id": "screenshot-1",
-      "description": "App Showcase Shot",
-      "imageUrl": "https://picsum.photos/seed/sshot1/600/1200",
-      "imageHint": "mobile interface"
->>>>>>> 85d369b950bcca4b11241bac98a4cc14f026e73c
     }
   ]
 }
