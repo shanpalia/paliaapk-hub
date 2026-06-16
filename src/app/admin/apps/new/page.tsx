@@ -1,10 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { 
   ArrowUpCircle, 
-  CheckCircle2, 
   ImageIcon, 
   FileCode, 
   Loader2, 
@@ -19,8 +18,6 @@ import {
   Save,
   Eye,
   LayoutGrid,
-  Zap,
-  ShieldAlert,
   Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,10 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useFirestore } from "@/firebase";
-import { collection, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
-import { AppCard } from "@/components/app-card";
-import { uploadToGithubRelease } from "@/lib/github-actions";
+import { supabase } from "@/lib/supabase";
 import { 
   adminAutoGenerateAppDescription, 
   AdminAutoGenerateAppDescriptionOutput,
@@ -48,17 +42,17 @@ const CATEGORIES = ["Games", "Tools", "Social", "Entertainment", "Education", "L
 function AddOrUpdateAppForm() {
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
-  const [publishStep, setPublishStep] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [apkFile, setApkFile] = useState<File | null>(null);
-  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   
   const [iconPreview, setIconPreview] = useState<string>("");
-  const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
+  const [screenshotPreview, setScreenshotPreview] = useState<string>("");
   
-  // AI & Connection States
   const [aiResult, setAiResult] = useState<AdminAutoGenerateAppDescriptionOutput | null>(null);
   const [apiStatus, setApiStatus] = useState<'idle' | 'connected' | 'invalid_key' | 'quota_exceeded' | 'unavailable'>('idle');
   const [statusMessage, setStatusMessage] = useState<string>("Handshake Required");
@@ -66,7 +60,6 @@ function AddOrUpdateAppForm() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const db = useFirestore();
 
   const [formData, setFormData] = useState({
     appName: "",
@@ -75,51 +68,46 @@ function AddOrUpdateAppForm() {
     category: "Games",
     developer: "ShanPalia",
     apkSize: "N/A",
-    packageName: "unknown",
+    packageName: "",
     whatsNew: "",
     isFeatured: false,
-    isHidden: false,
     iconUrl: "",
     apkUrl: "",
-    screenshots: [] as string[]
+    screenshotUrl: ""
   });
 
   useEffect(() => {
     const editId = searchParams.get('edit');
-    if (editId && db) {
+    if (editId) {
       setEditingId(editId);
-      getDoc(doc(db, "apps", editId)).then(snap => {
-        if (snap.exists()) {
-          const app = snap.data();
+      supabase.from('apps').select('*').eq('id', editId).single().then(({ data: app }) => {
+        if (app) {
           setFormData({
-            appName: app.appName || "",
-            description: app.description || "",
-            version: app.version || "",
+            appName: app.app_name,
+            description: app.description,
+            version: app.version,
             category: app.category || "Games",
             developer: app.developer || "ShanPalia",
-            apkSize: app.apkSize || "N/A",
-            packageName: app.packageName || "unknown",
-            whatsNew: app.whatsNew || "",
-            isFeatured: app.isFeatured || false,
-            isHidden: app.isHidden || false,
-            iconUrl: app.iconUrl || "",
-            apkUrl: app.apkUrl || "",
-            screenshots: app.screenshots || []
+            apkSize: app.apk_size || "N/A",
+            packageName: app.package_name || "",
+            whatsNew: app.whats_new || "",
+            isFeatured: app.is_featured || false,
+            iconUrl: app.icon_url,
+            apkUrl: app.apk_url,
+            screenshotUrl: app.screenshot_url || ""
           });
-          setIconPreview(app.iconUrl || "");
-          setScreenshotPreviews(app.screenshots || []);
+          setIconPreview(app.icon_url);
+          setScreenshotPreview(app.screenshot_url || "");
         }
       });
     }
-  }, [searchParams, db]);
+  }, [searchParams]);
 
   const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIconFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setIconPreview(reader.result as string);
-      reader.readAsDataURL(file);
+      setIconPreview(URL.createObjectURL(file));
     }
   };
 
@@ -133,43 +121,11 @@ function AddOrUpdateAppForm() {
   };
 
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      setScreenshotFiles(prev => [...prev, ...files]);
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => setScreenshotPreviews(prev => [...prev, reader.result as string]);
-        reader.readAsDataURL(file);
-      });
+    const file = e.target.files?.[0];
+    if (file) {
+      setScreenshotFile(file);
+      setScreenshotPreview(URL.createObjectURL(file));
     }
-  };
-
-  const testConnection = async () => {
-    setApiStatus('idle');
-    setStatusMessage("Validating Gateway...");
-    try {
-      const { status, message } = await checkAiHealth();
-      setApiStatus(status);
-      setStatusMessage(message);
-      if (status === 'connected') {
-        toast({ title: "Hub Secure", description: "AI Node connectivity verified." });
-      } else {
-        toast({ title: "Protocol Fault", description: message, variant: "destructive" });
-      }
-    } catch (e) {
-      setApiStatus('unavailable');
-      setStatusMessage("Service Unreachable");
-    }
-  };
-
-  const generateFallback = () => {
-    const fallback: AdminAutoGenerateAppDescriptionOutput = {
-      fullDescription: `Overview:\n${formData.appName || "Application"} is a powerful application in the ${formData.category} category.\n\nFeatures:\n• Easy to use\n• Fast performance\n• Modern interface\n\nDeveloper: ${formData.developer}\nVersion: ${formData.version || "Current"}`,
-      seoSummary: `${formData.appName || "App"} v${formData.version || "Current"} - Professional APK from PaliaAPK Hub.`,
-      versionChangelog: `Version ${formData.version || "Current"} stability updates and performance optimizations.`
-    };
-    setAiResult(fallback);
-    toast({ title: "Fallback Triggered", description: "AI node unreachable. Tactical template generated." });
   };
 
   const handleAiGeneration = async () => {
@@ -178,158 +134,90 @@ function AddOrUpdateAppForm() {
       return;
     }
     setAiLoading(true);
-    setAiResult(null);
     try {
       const result = await adminAutoGenerateAppDescription({
         appName: formData.appName,
         appVersion: formData.version,
         category: formData.category,
-        developer: formData.developer,
-        keywords: `${formData.appName}, APK, Hub, Android, ${formData.category}`
+        developer: formData.developer
       });
       setAiResult(result);
       setApiStatus('connected');
-      setStatusMessage("Node: Online");
-      toast({ title: "AI Assistant Ready", description: "Hub distribution protocols drafted." });
-    } catch (e: any) {
-      console.error("AI Node Failure:", e.message);
-      if (e.message.includes('AUTH_FAULT')) setApiStatus('invalid_key');
-      else if (e.message.includes('QUOTA_FAULT')) setApiStatus('quota_exceeded');
-      else setApiStatus('unavailable');
-      
-      setStatusMessage(e.message || "AI service temporarily unavailable.");
-      generateFallback();
+    } catch (e) {
+      setApiStatus('unavailable');
     } finally {
       setAiLoading(false);
     }
   };
 
-  const applyAiText = () => {
-    if (!aiResult) return;
-    setFormData(prev => ({
-      ...prev,
-      description: aiResult.fullDescription,
-      whatsNew: aiResult.versionChangelog
-    }));
-    setAiResult(null);
-    toast({ title: "Content Applied", description: "Hub description updated with drafted text." });
-  };
-
-  const copyToClipboard = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Copied to Clipboard" });
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve((reader.result as string).split(',')[1]);
-      reader.onerror = error => reject(error);
-    });
+  const uploadFile = async (file: File, bucket: string) => {
+    const ext = file.name.split('.').pop();
+    const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file);
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
+    return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db) return;
-
-    // Manual Validation Check
-    if (!formData.appName) {
-      toast({ title: "App Identity Missing", description: "Please provide an App Name.", variant: "destructive" });
-      return;
-    }
-    if (!formData.version) {
-      toast({ title: "Version Required", description: "Release code (version) is mandatory for distribution.", variant: "destructive" });
-      return;
-    }
-    if (!editingId && (!iconFile || !apkFile)) {
-      toast({ title: "Assets Missing", description: "Icon and APK binary must be attached for new entries.", variant: "destructive" });
-      return;
-    }
-    if (!formData.description) {
-      toast({ title: "Hub Description Void", description: "Please add a description or generate one with AI.", variant: "destructive" });
-      return;
-    }
+    if (!formData.appName || !formData.version) return;
 
     setLoading(true);
+    setUploadProgress(10);
     try {
       let finalIconUrl = formData.iconUrl;
       let finalApkUrl = formData.apkUrl;
-      let finalScreenshots = [...formData.screenshots];
-
-      const filesToUpload = [];
+      let finalScreenshotUrl = formData.screenshotUrl;
 
       if (iconFile) {
-        setPublishStep("Uploading Hub Icon...");
-        filesToUpload.push({
-          name: `icon-${Date.now()}.${iconFile.name.split('.').pop()}`,
-          type: iconFile.type,
-          base64: await fileToBase64(iconFile)
-        });
+        setCurrentPhase("Uploading Icon...");
+        finalIconUrl = await uploadFile(iconFile, 'app-icons');
+        setUploadProgress(30);
       }
 
       if (apkFile) {
-        setPublishStep("Uploading APK Binary...");
-        filesToUpload.push({
-          name: apkFile.name,
-          type: 'application/vnd.android.package-archive',
-          base64: await fileToBase64(apkFile)
-        });
+        setCurrentPhase("Uploading APK...");
+        finalApkUrl = await uploadFile(apkFile, 'apk-files');
+        setUploadProgress(60);
       }
 
-      for (let i = 0; i < screenshotFiles.length; i++) {
-        setPublishStep(`Preparing screenshot ${i + 1}...`);
-        filesToUpload.push({
-          name: `shot-${i}-${Date.now()}.${screenshotFiles[i].name.split('.').pop()}`,
-          type: screenshotFiles[i].type,
-          base64: await fileToBase64(screenshotFiles[i])
-        });
+      if (screenshotFile) {
+        setCurrentPhase("Uploading Screenshot...");
+        finalScreenshotUrl = await uploadFile(screenshotFile, 'screenshots');
+        setUploadProgress(80);
       }
 
-      if (filesToUpload.length > 0) {
-        setPublishStep("Distributing Assets to GitHub...");
-        const uploadResults = await uploadToGithubRelease(formData.version, filesToUpload);
-        
-        uploadResults.forEach(res => {
-          if (res.name.includes('icon-')) {
-            finalIconUrl = res.assetUrl;
-          } else if (res.name.endsWith('.apk')) {
-            finalApkUrl = res.assetUrl;
-          } else if (res.name.includes('shot-')) {
-            finalScreenshots.push(res.assetUrl);
-          }
-        });
-      }
-
-      setPublishStep("Finalizing Hub Metadata...");
-      const appData = {
-        ...formData,
-        iconUrl: finalIconUrl,
-        apkUrl: finalApkUrl,
-        screenshots: finalScreenshots,
-        status: "published",
-        updatedAt: serverTimestamp()
+      setCurrentPhase("Saving Metadata...");
+      const payload = {
+        app_name: formData.appName,
+        description: formData.description,
+        version: formData.version,
+        category: formData.category,
+        developer: formData.developer,
+        apk_size: formData.apkSize,
+        package_name: formData.packageName,
+        whats_new: formData.whatsNew,
+        is_featured: formData.isFeatured,
+        icon_url: finalIconUrl,
+        apk_url: finalApkUrl,
+        screenshot_url: finalScreenshotUrl,
+        downloads: 0
       };
 
       if (editingId) {
-        await updateDoc(doc(db, "apps", editingId), appData);
+        await supabase.from('apps').update(payload).eq('id', editingId);
         toast({ title: "Hub Entry Updated" });
       } else {
-        await addDoc(collection(db, "apps"), {
-          ...appData,
-          downloads: 0,
-          createdAt: serverTimestamp()
-        });
+        await supabase.from('apps').insert([payload]);
         toast({ title: "App Published Successfully" });
       }
       router.push("/admin/apps");
     } catch (error: any) {
-      toast({ title: "Distribution Fault", description: error.message, variant: "destructive" });
+      toast({ title: "Storage Fault", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
-      setPublishStep(null);
+      setUploadProgress(0);
     }
   };
 
@@ -339,240 +227,90 @@ function AddOrUpdateAppForm() {
         <Button variant="ghost" size="icon" className="rounded-2xl" onClick={() => router.push('/admin/dashboard')}>
           <ArrowLeft className="h-6 w-6" />
         </Button>
-        <div>
-          <h1 className="text-4xl font-black font-headline tracking-tighter uppercase">
-            {editingId ? "Modify Hub Entry" : "Publish Binary"}
-          </h1>
-          <p className="text-primary text-[9px] font-black uppercase tracking-[0.3em] mt-2">New Distribution Protocol</p>
-        </div>
+        <h1 className="text-4xl font-black uppercase tracking-tighter">
+          {editingId ? "Modify Hub Entry" : "Publish Binary"}
+        </h1>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-12">
         <div className="xl:col-span-2 space-y-12">
-          <Card className="rounded-[3.5rem] border-none shadow-sm bg-white p-12">
-            <form onSubmit={handleSubmit} className="space-y-16" noValidate>
-              
-              {/* 1. App Information */}
+          <Card className="rounded-[3.5rem] p-12 bg-white shadow-xl border-none">
+            <form onSubmit={handleSubmit} className="space-y-16">
               <div className="space-y-8">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <LayoutGrid className="h-4 w-4" /> App Information
+                <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <LayoutGrid className="h-4 w-4" /> App Identity
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">App Identity</label>
-                    <Input placeholder="e.g. Social Finder" className="rounded-2xl h-14 bg-white border-gray-100 font-bold" value={formData.appName} onChange={e => setFormData({...formData, appName: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">Release Code (Version)</label>
-                    <Input placeholder="e.g. 1.0.4" className="rounded-2xl h-14 bg-white border-gray-100 font-bold" value={formData.version} onChange={e => setFormData({...formData, version: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">Category</label>
-                    <Select value={formData.category} onValueChange={val => setFormData({...formData, category: val})}>
-                      <SelectTrigger className="rounded-2xl h-14 bg-white border-gray-100 font-bold">
-                        <SelectValue placeholder="Select Category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">Entity Developer</label>
-                    <Input placeholder="Developer Name" className="rounded-2xl h-14 bg-white border-gray-100 font-bold" value={formData.developer} onChange={e => setFormData({...formData, developer: e.target.value})} />
-                  </div>
+                  <Input placeholder="App Name" className="h-14 rounded-2xl" value={formData.appName} onChange={e => setFormData({...formData, appName: e.target.value})} />
+                  <Input placeholder="Version (e.g. 1.0.0)" className="h-14 rounded-2xl" value={formData.version} onChange={e => setFormData({...formData, version: e.target.value})} />
+                  <Select value={formData.category} onValueChange={v => setFormData({...formData, category: v})}>
+                    <SelectTrigger className="h-14 rounded-2xl">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input placeholder="Developer" className="h-14 rounded-2xl" value={formData.developer} onChange={e => setFormData({...formData, developer: e.target.value})} />
                 </div>
               </div>
 
-              {/* 2. Media Uploads */}
               <div className="space-y-8">
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <ArrowUpCircle className="h-4 w-4" /> Media & Binary Assets
+                <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <ArrowUpCircle className="h-4 w-4" /> Asset Injection
                 </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                  <div className="space-y-4">
-                    <label className="text-[9px] font-black uppercase tracking-widest ml-2 text-muted-foreground">Hub Icon (Square)</label>
-                    <div className="flex justify-center">
-                      <div className="relative group">
-                        <div className={`w-36 h-36 rounded-[2.5rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer hover:border-primary/50 hover:bg-primary/5 overflow-hidden shadow-inner ${iconPreview ? 'border-none p-0' : ''}`}>
-                          {iconPreview ? (
-                            <img src={iconPreview} className="w-full h-full object-cover object-center" alt="Icon preview" />
-                          ) : (
-                            <>
-                              <ImageIcon className="h-7 w-7 text-muted-foreground group-hover:text-primary" />
-                              <span className="text-[8px] font-black uppercase">Identify</span>
-                            </>
-                          )}
-                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleIconChange} />
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Hub Icon</label>
+                    <div className="relative aspect-square rounded-[2rem] border-2 border-dashed flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer">
+                      {iconPreview ? <img src={iconPreview} className="w-full h-full object-cover" /> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                      <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleIconChange} />
                     </div>
                   </div>
-
-                  <div className="space-y-4">
-                    <label className="text-[9px] font-black uppercase tracking-widest ml-2 text-muted-foreground">Android Binary (.apk)</label>
-                    <div className={`w-full h-36 rounded-[2.5rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer hover:border-primary/50 hover:bg-primary/5 relative shadow-inner ${apkFile ? 'border-primary/30 bg-primary/5' : ''}`}>
-                       {apkFile ? (
-                         <div className="text-center p-6 space-y-2">
-                           <FileCode className="h-10 w-10 text-primary mx-auto" />
-                           <p className="text-[10px] font-black truncate max-w-[140px]">{apkFile.name}</p>
-                           <Badge variant="outline" className="text-[8px] bg-white">{formData.apkSize}</Badge>
-                         </div>
-                       ) : (
-                         <>
-                           <ArrowUpCircle className="h-7 w-7 text-muted-foreground" />
-                           <span className="text-[9px] font-black uppercase">Inject APK</span>
-                         </>
-                       )}
-                       <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept=".apk" onChange={handleApkChange} />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Binary APK</label>
+                    <div className="relative aspect-square rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center bg-gray-50 cursor-pointer text-center p-4">
+                      {apkFile ? <><FileCode className="h-8 w-8 text-primary mb-2" /><span className="text-[9px] font-black truncate w-full">{apkFile.name}</span></> : <><ArrowUpCircle className="h-8 w-8 text-muted-foreground" /><span className="text-[9px] font-black mt-2">Inject APK</span></>}
+                      <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept=".apk" onChange={handleApkChange} />
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[9px] font-black uppercase tracking-widest ml-2 text-muted-foreground">Hub Screenshots (Optional)</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {screenshotPreviews.map((src, i) => (
-                      <div key={i} className="aspect-[9/16] rounded-2xl overflow-hidden border border-gray-100 relative group">
-                        <img src={src} className="w-full h-full object-cover" />
-                        <button 
-                          type="button" 
-                          onClick={() => setScreenshotPreviews(prev => prev.filter((_, idx) => idx !== i))}
-                          className="absolute top-2 right-2 h-6 w-6 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    <div className="aspect-[9/16] rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors relative cursor-pointer">
-                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                      <span className="text-[8px] font-black uppercase">Add Media</span>
-                      <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleScreenshotChange} />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">Screenshot</label>
+                    <div className="relative aspect-square rounded-[2rem] border-2 border-dashed flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer">
+                      {screenshotPreview ? <img src={screenshotPreview} className="w-full h-full object-cover" /> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                      <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleScreenshotChange} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* 3. Hub Description Section */}
-              <div className="space-y-8 bg-white p-10 rounded-[3rem] border border-gray-100">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+              <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                     <FileText className="h-4 w-4" /> Hub Description
                   </h3>
-                  
-                  {/* API Health Diagnostic */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-gray-100">
-                      <div className={`h-2 w-2 rounded-full animate-pulse ${
-                        apiStatus === 'connected' ? 'bg-emerald-500' : 
-                        apiStatus === 'idle' ? 'bg-amber-500' : 'bg-red-500'
-                      }`} />
-                      <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">
-                        AI Status: {statusMessage}
-                      </span>
-                    </div>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={testConnection}
-                      className="h-8 rounded-full px-4 text-[8px] font-black uppercase tracking-widest hover:bg-primary/5"
-                    >
-                      <Activity className="h-3 w-3 mr-2" /> Test
-                    </Button>
-                  </div>
-
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="rounded-full h-10 px-6 font-black text-[10px] uppercase tracking-widest bg-[#00D26A] text-white border-none hover:bg-[#00B85C] shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
-                    onClick={handleAiGeneration}
-                    disabled={aiLoading}
-                  >
-                    {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                    ✨ Generate AI Description
+                  <Button type="button" variant="outline" className="rounded-full h-10 px-6 font-black text-[10px] uppercase bg-primary/10 text-primary border-none" onClick={handleAiGeneration} disabled={aiLoading}>
+                    {aiLoading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
+                    ✨ Generate AI Content
                   </Button>
                 </div>
-
-                {/* AI Result Display */}
-                {aiLoading && (
-                  <div className="py-12 flex flex-col items-center justify-center gap-4 bg-white rounded-[2rem] border border-dashed border-primary/20 animate-pulse">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">AI Copywriter is drafting hub assets...</p>
-                  </div>
-                )}
-
-                {aiResult && !aiLoading && (
-                  <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 bg-emerald-50/20 p-8 rounded-[2rem] border border-emerald-100">
-                    <div className="flex items-center justify-between">
-                      <Badge className="bg-[#00D26A] font-black text-[8px] uppercase tracking-widest">
-                        {apiStatus === 'connected' ? 'AI Optimized Draft' : 'Tactical Fallback Template'}
-                      </Badge>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => copyToClipboard(aiResult.fullDescription)} className="h-8 w-8">
-                        {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                      </Button>
-                    </div>
-                    <ScrollArea className="h-48 rounded-xl bg-white p-6 border border-gray-100 shadow-sm">
-                      <div className="text-xs font-medium leading-relaxed whitespace-pre-wrap">{aiResult.fullDescription}</div>
-                    </ScrollArea>
-                    <div className="flex gap-3 pt-2">
-                      <Button type="button" onClick={applyAiText} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest bg-[#00D26A] hover:bg-[#00B85C]">
-                        Use Generated Content
-                      </Button>
-                      <Button type="button" variant="outline" onClick={handleAiGeneration} className="flex-1 h-12 rounded-xl font-black text-[10px] uppercase tracking-widest bg-white">
-                        Regenerate
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between ml-2">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Hub Editor (HTML / Text Mode)</label>
-                  </div>
-                  <Textarea 
-                    placeholder="Describe app functionality, features, and technical highlights..." 
-                    className="rounded-[2.5rem] min-h-[300px] bg-white border-gray-100 p-8 font-medium text-sm leading-relaxed shadow-sm focus-visible:ring-primary" 
-                    value={formData.description} 
-                    onChange={e => setFormData({...formData, description: e.target.value})} 
-                  />
-                </div>
+                <Textarea placeholder="Describe app functionality..." className="min-h-[250px] rounded-[2rem] p-8" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
               </div>
 
-              {/* Only show Changelog when editing/updating */}
-              {editingId && (
-                <div className="space-y-8 bg-gray-50/30 p-10 rounded-[3rem] border border-gray-100">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                    <History className="h-4 w-4" /> Intelligence Report (Changelog)
-                  </h3>
-                  <div className="space-y-2">
-                    <label className="text-[8px] font-black uppercase tracking-widest ml-4 text-muted-foreground">Version updates for v{formData.version}</label>
-                    <Textarea placeholder="Describe what's new in this release..." className="rounded-2xl min-h-[120px] bg-white border-gray-100 p-6 font-bold text-xs" value={formData.whatsNew} onChange={e => setFormData({...formData, whatsNew: e.target.value})} />
-                  </div>
-                </div>
-              )}
-
               {loading && (
-                <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-primary">
-                    <span>{publishStep}</span>
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-black uppercase text-primary">
+                    <span>{currentPhase}</span>
+                    <span>{uploadProgress}%</span>
                   </div>
-                  <Progress value={publishStep?.includes('Binary') ? 40 : publishStep?.includes('Assets') ? 70 : 90} className="h-2 rounded-full" />
+                  <Progress value={uploadProgress} className="h-2 rounded-full" />
                 </div>
               )}
 
-              {/* 4. Publish Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-gray-100">
-                <Button type="button" variant="outline" className="h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest gap-2 bg-white">
-                  <Save className="h-4 w-4" /> Save Draft
-                </Button>
-                <Button type="button" variant="outline" className="h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest gap-2 bg-white">
-                  <Eye className="h-4 w-4" /> Tactical Preview
-                </Button>
-                <Button type="submit" className="h-16 rounded-2xl font-black text-xs premium-gradient text-white uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all" disabled={loading}>
-                  {loading ? <Loader2 className="animate-spin h-6 w-6" /> : (editingId ? 'Execute Update' : 'Initialize Distribution')}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-10">
+                <Button type="button" variant="outline" className="h-16 rounded-2xl font-black text-[10px] uppercase bg-white">Save Draft</Button>
+                <Button type="submit" className="h-16 rounded-2xl font-black text-xs premium-gradient text-white uppercase shadow-xl" disabled={loading}>
+                  {loading ? <Loader2 className="animate-spin" /> : (editingId ? 'Update Entry' : 'Publish to Store')}
                 </Button>
               </div>
             </form>
@@ -581,19 +319,18 @@ function AddOrUpdateAppForm() {
 
         <div className="space-y-8">
           <div className="sticky top-12 space-y-8">
-            <h3 className="text-sm font-black uppercase tracking-[0.3em] px-4">Tactical Hub Preview</h3>
-            <div className="pointer-events-none scale-95 origin-top opacity-90 drop-shadow-2xl">
-              <AppCard app={{ ...formData, id: 'preview', iconUrl: iconPreview } as any} />
-            </div>
-            
-            <Card className="rounded-[2.5rem] p-8 bg-white border-none shadow-sm space-y-4">
-              <div className="flex items-center gap-3 text-emerald-600">
-                <ShieldCheck className="h-5 w-5" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Security Clearance</span>
-              </div>
-              <p className="text-[10px] font-medium text-muted-foreground leading-relaxed">
-                Distribution to the PaliaAPK Hub requires direct injection into the Global Distribution framework. Ensure all assets are verified before publication.
-              </p>
+            <h3 className="text-sm font-black uppercase tracking-widest px-4">Instant Hub Preview</h3>
+            <Card className="rounded-[3rem] p-8 bg-white border-none shadow-xl flex flex-col items-center text-center gap-6">
+               <div className="w-24 h-24 rounded-[2rem] bg-gray-50 overflow-hidden shadow-inner border border-gray-100">
+                  {iconPreview && <img src={iconPreview} className="w-full h-full object-cover" />}
+               </div>
+               <div>
+                  <h4 className="text-2xl font-black tracking-tighter">{formData.appName || "App Identity"}</h4>
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">{formData.category}</p>
+               </div>
+               <Button className="w-full h-14 rounded-2xl font-black text-sm uppercase premium-gradient text-white shadow-lg pointer-events-none">
+                  Download APK
+               </Button>
             </Card>
           </div>
         </div>

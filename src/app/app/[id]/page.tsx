@@ -3,221 +3,122 @@
 
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { Download, Share2, Star, ShieldCheck, Loader2, Lock, Box, Activity, History } from "lucide-react";
+import { Download, Star, ShieldCheck, Loader2, Lock, Box, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { useDoc, useUser, useFirestore, useMemoFirebase } from "@/firebase";
-import { AppEntry } from "@/lib/types";
-import { doc, updateDoc, increment } from "firebase/firestore";
+import { supabase, AppData } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 export default function AppDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useUser();
-  const db = useFirestore();
+  const [app, setApp] = useState<AppData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
   const appId = params.id as string;
 
-  const appRef = useMemoFirebase(() => {
-    if (!db || !appId) return null;
-    return doc(db, "apps", appId);
-  }, [db, appId]);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
 
-  const { data: app, loading } = useDoc<AppEntry>(appRef);
+    const fetchApp = async () => {
+      const { data, error } = await supabase.from('apps').select('*').eq('id', appId).single();
+      if (!error) setApp(data);
+      setLoading(false);
+    };
+
+    if (appId) fetchApp();
+  }, [appId]);
 
   const handleDownload = async () => {
     if (!user) {
-      toast({
-        title: "Security Gate",
-        description: "Please authenticate to access hub binaries.",
-        variant: "destructive",
-      });
+      toast({ title: "Hub Handshake Failed", description: "Identity verification required for binary transfer.", variant: "destructive" });
       router.push("/profile");
       return;
     }
 
-    if (app?.apkUrl) {
-      window.open(app.apkUrl, "_blank");
-      toast({
-        title: "Initializing Transfer",
-        description: `Downloading latest binary: ${app.appName} v${app.version}...`,
-      });
-
-      // Increment Traffic Counter
-      if (db && appId) {
-        const docRef = doc(db, "apps", appId);
-        updateDoc(docRef, { downloads: increment(1) });
-      }
-    } else {
-      toast({
-        title: "Processing Binary",
-        description: "This version is currently being scanned and finalized.",
-        variant: "destructive",
-      });
+    if (app?.apk_url) {
+      window.open(app.apk_url, "_blank");
+      toast({ title: "Transfer Initialized", description: `Downloading ${app.app_name} package...` });
+      
+      // Increment counter
+      supabase.from('apps').update({ downloads: (app.downloads || 0) + 1 }).eq('id', appId);
     }
   };
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6">
-        <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center animate-pulse">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        </div>
-        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Verifying PaliaAPK Integrity...</p>
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Scanning Hub Binary...</p>
       </div>
     );
   }
 
-  if (!app) {
-    return (
-      <div className="text-center py-32 space-y-6">
-        <h2 className="text-4xl font-black font-headline">Entry Void</h2>
-        <p className="text-muted-foreground font-medium">The requested binary signature does not exist.</p>
-        <Button onClick={() => router.push("/")} className="rounded-full h-14 px-10 font-bold">Return to Hub</Button>
-      </div>
-    );
-  }
-
-  const defaultIcon = `https://picsum.photos/seed/${app.id}/400/400`;
+  if (!app) return <div className="text-center py-20 font-black">Entry Not Found</div>;
 
   return (
-    <div className="pb-20 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <section className="flex gap-8 items-center px-2">
-        <div className="relative w-32 h-32 rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white flex-shrink-0 animate-float">
-          <Image 
-            src={app.iconUrl || defaultIcon} 
-            alt={app.appName} 
-            fill 
-            className="object-cover" 
-          />
+    <div className="pb-24 space-y-12 animate-in fade-in duration-700">
+      <section className="flex gap-10 items-center px-4">
+        <div className="relative w-36 h-36 rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white shrink-0">
+          <Image src={app.icon_url} alt={app.app_name} fill className="object-cover" />
         </div>
         <div className="flex-1 space-y-2">
-          <h1 className="text-4xl font-black font-headline tracking-tighter leading-tight">{app.appName}</h1>
-          <p className="text-primary font-black text-sm uppercase tracking-widest">{app.developer || "PaliaAPK Hub"}</p>
-          <div className="flex items-center gap-6 pt-4">
+          <h1 className="text-5xl font-black tracking-tighter leading-none">{app.app_name}</h1>
+          <p className="text-primary font-black text-sm uppercase tracking-widest">{app.developer}</p>
+          <div className="flex items-center gap-6 pt-6">
             <div className="text-center">
-              <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Rating</p>
-              <div className="flex items-center justify-center gap-1 font-black text-lg text-yellow-500">
-                4.9 <Star className="h-4 w-4 fill-yellow-500" />
-              </div>
+               <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Rating</p>
+               <span className="font-black text-lg">4.9 <Star className="inline h-4 w-4 fill-primary text-primary" /></span>
             </div>
-            <div className="w-px h-10 bg-gray-100" />
             <div className="text-center">
-              <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Storage</p>
-              <span className="font-black text-lg">{app.apkSize || "N/A"}</span>
+               <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Storage</p>
+               <span className="font-black text-lg">{app.apk_size || "N/A"}</span>
             </div>
-            <div className="w-px h-10 bg-gray-100" />
             <div className="text-center">
-              <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Traffic</p>
-              <span className="font-black text-lg">{app.downloads?.toLocaleString() || 0}</span>
+               <p className="text-[8px] font-black text-muted-foreground uppercase mb-1">Traffic</p>
+               <span className="font-black text-lg">{app.downloads.toLocaleString()}</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="flex flex-col gap-4 px-2">
-        <Button 
-          className="flex-1 rounded-[2rem] h-20 text-xl font-black shadow-2xl premium-gradient text-white hover:scale-[1.01] active:scale-95 transition-all" 
-          onClick={handleDownload}
-        >
-          {user ? (
-            <>
-              <Download className="mr-3 h-7 w-7" /> {app.updatedAt ? 'INSTALL UPDATE' : 'INITIALIZE TRANSFER'}
-            </>
-          ) : (
-            <>
-              <Lock className="mr-3 h-7 w-7" /> LOGIN TO ACCESS
-            </>
-          )}
+      <section className="px-4 space-y-4">
+        <Button className="w-full h-20 rounded-[2rem] text-2xl font-black premium-gradient text-white shadow-xl hover:scale-[1.01] transition-all" onClick={handleDownload}>
+          {user ? <><Download className="mr-3 h-8 w-8" /> Download APK</> : <><Lock className="mr-3 h-8 w-8" /> Authenticate to Access</>}
         </Button>
         <div className="flex gap-4">
-          <Button variant="secondary" className="flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest">
-            Latest Version: v{app.version}
-          </Button>
-          <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl glass shadow-lg">
-            <Share2 className="h-6 w-6 text-primary" />
-          </Button>
+           <Badge variant="secondary" className="flex-1 h-14 rounded-2xl font-black justify-center">Version: {app.version}</Badge>
+           <Badge variant="secondary" className="flex-1 h-14 rounded-2xl font-black justify-center">{app.category}</Badge>
         </div>
       </section>
 
-      {app.screenshots && app.screenshots.length > 0 && (
-        <section className="px-2">
-          <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex space-x-4 pb-4">
-              {app.screenshots.map((src, i) => (
-                <div key={i} className="relative w-64 aspect-[9/16] rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl group transition-transform hover:scale-[1.02]">
-                  <Image src={src} alt="screenshot" fill className="object-cover" />
-                </div>
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </section>
-      )}
-
-      <section className="space-y-12 px-4">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black font-headline tracking-tight">Intelligence Report</h2>
-            <Badge className="rounded-full premium-gradient px-4 py-1 text-[10px] font-black uppercase">Verified</Badge>
-          </div>
-          <div className="glass rounded-[3rem] p-8">
-            <p className="text-muted-foreground text-base leading-relaxed font-medium whitespace-pre-wrap">
-              {app.description || "Verified binary distribution provided by the PaliaAPK Hub Network."}
-            </p>
-          </div>
+      <section className="px-4 space-y-8">
+        <div className="flex items-center justify-between">
+           <h2 className="text-3xl font-black tracking-tight">Hub Distribution Matrix</h2>
+           <Badge className="premium-gradient font-black text-[9px] uppercase">Verified</Badge>
         </div>
-
-        {app.whatsNew && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary/10 rounded-xl">
-                <History className="h-6 w-6 text-primary" />
-              </div>
-              <h2 className="text-2xl font-black font-headline tracking-tight">What's New</h2>
-            </div>
-            <div className="bg-primary/5 border border-primary/10 rounded-[3rem] p-8">
-              <p className="text-primary/80 text-sm font-bold uppercase tracking-widest mb-4">Version {app.version} Highlights</p>
-              <p className="text-muted-foreground text-base leading-relaxed font-medium whitespace-pre-wrap">
-                {app.whatsNew}
-              </p>
-            </div>
+        <div className="bg-white rounded-[3rem] p-10 shadow-xl border border-gray-50">
+           <p className="text-muted-foreground text-lg leading-relaxed font-medium whitespace-pre-wrap">{app.description}</p>
+        </div>
+        
+        {app.screenshot_url && (
+          <div className="relative aspect-video rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white">
+             <Image src={app.screenshot_url} alt="App Preview" fill className="object-cover" />
           </div>
         )}
       </section>
 
-      <section className="mx-4 p-8 glass rounded-[3rem] border border-primary/20 flex items-start gap-6 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-150 transition-transform duration-700" />
-        <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-white flex-shrink-0 shadow-xl shadow-primary/30">
-          <ShieldCheck className="h-10 w-10" />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-xl font-black tracking-tight">PaliaAPK Hub Core Scanning</h3>
-          <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-            Release v{app.version} has cleared the triple-pass security protocol. Guaranteed free from invasive trackers and malware.
-          </p>
-        </div>
-      </section>
-
-      <section className="space-y-6 px-4">
-        <h2 className="text-2xl font-black font-headline tracking-tight">Technical Matrix</h2>
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: "Signature", val: app.version, icon: Activity },
-            { label: "Traffic", val: `${app.downloads?.toLocaleString() || 0}`, icon: Box },
-            { label: "Entity", val: app.developer || "PaliaAPK Hub", icon: ShieldCheck },
-            { label: "Protocol", val: app.packageName || "unknown", icon: Box }
-          ].map((item, i) => (
-            <div key={i} className="glass p-6 rounded-[2rem] flex flex-col justify-between h-32">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{item.label}</p>
-                <item.icon className="h-4 w-4 text-primary opacity-40" />
-              </div>
-              <p className="font-black text-lg truncate pr-2">{item.val}</p>
-            </div>
-          ))}
-        </div>
+      <section className="mx-4 p-10 bg-black text-white rounded-[3rem] shadow-2xl flex items-center gap-8">
+         <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shrink-0 shadow-lg">
+            <ShieldCheck className="h-10 w-10 text-white" />
+         </div>
+         <div>
+            <h3 className="text-xl font-black">Native Hub Verification</h3>
+            <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-1">Sandbox Scanned & Protocol Approved</p>
+         </div>
       </section>
     </div>
   );

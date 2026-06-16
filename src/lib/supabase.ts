@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
@@ -5,13 +6,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const isSupabaseConfigured = 
-  !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
-  process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
-  !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'placeholder';
-
-export type AppData = {
+export interface AppData {
   id: string;
   app_name: string;
   version: string;
@@ -23,4 +18,18 @@ export type AppData = {
   downloads: number;
   created_at: string;
   category: string;
+  developer: string;
+  whats_new?: string;
+  is_featured: boolean;
+  package_name?: string;
+  apk_size?: string;
+}
+
+export type UserProfile = {
+  id: string;
+  uid: string;
+  email: string;
+  role: 'user' | 'admin' | 'blocked';
+  display_name?: string;
+  created_at: string;
 };

@@ -1,118 +1,106 @@
+
 'use client';
 
 import { useState, useEffect } from "react";
-import { useCollection, useFirestore } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
-import { useMemoFirebase } from "@/firebase/use-memo-firebase";
+import { supabase, AppData } from "@/lib/supabase";
 import { AppCard } from "@/components/app-card";
-import { AppEntry } from "@/lib/types";
-import { Sparkles, Zap, ShieldCheck, LayoutGrid, Loader2 } from "lucide-react";
+import { Sparkles, LayoutGrid, Loader2, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HexagonLogo } from "@/components/logo";
 
 export default function Home() {
   const [isSplash, setIsSplash] = useState(true);
-  const db = useFirestore();
+  const [apps, setApps] = useState<AppData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsSplash(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Load all apps where status == "published"
-  const publishedAppsQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(
-      collection(db, "apps"), 
-      where("status", "==", "published"),
-      where("isHidden", "==", false),
-      orderBy("createdAt", "desc")
-    );
-  }, [db]);
+  useEffect(() => {
+    const fetchApps = async () => {
+      const { data, error } = await supabase
+        .from('apps')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setApps(data);
+      }
+      setLoading(false);
+    };
 
-  const { data: apps, loading } = useCollection<AppEntry>(publishedAppsQuery);
-
-  const featuredApp = apps?.find(a => a.isFeatured) || apps?.[0];
+    fetchApps();
+  }, []);
 
   if (isSplash) {
     return (
-      <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center animate-in fade-in duration-500">
+      <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center">
         <div className="w-32 h-32 mb-8 animate-float">
           <HexagonLogo />
         </div>
         <h1 className="text-4xl font-black font-headline tracking-tighter mb-2">
-          <span className="bg-gradient-to-r from-blue-500 via-emerald-500 to-mint-500 bg-clip-text text-transparent">
-            PaliaAPK
-          </span>{" "}
-          Hub
+          PaliaAPK <span className="text-primary italic">Hub</span>
         </h1>
-        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em] mb-12">
-          Verified Binary Hub
-        </p>
-        <div className="flex gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
-          <div className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
-          <div className="w-2 h-2 rounded-full bg-primary animate-bounce" />
-        </div>
+        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Verified Binary Terminal</p>
       </div>
     );
   }
 
+  const featuredApp = apps.find(a => a.is_featured) || apps[0];
+
   return (
-    <div className="space-y-10 pb-20 animate-in fade-in duration-700">
-      {/* Hero Section */}
+    <div className="space-y-12 pb-24 animate-in fade-in duration-700">
       <section className="px-1">
         {loading ? (
           <Skeleton className="w-full aspect-[21/10] rounded-[3rem]" />
         ) : featuredApp ? (
-          <AppCard app={featuredApp} variant="large" />
+          <AppCard app={featuredApp as any} variant="large" />
         ) : (
-          <div className="w-full aspect-[21/10] rounded-[3rem] bg-gray-50 flex flex-col items-center justify-center border border-gray-100 shadow-inner">
-            <Zap className="h-10 w-10 mb-4 text-primary opacity-20" />
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Hub Terminal Connected</p>
+          <div className="w-full aspect-[21/10] rounded-[3rem] bg-gray-50 flex items-center justify-center border border-gray-100">
+             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Hub Repository Empty</p>
           </div>
         )}
       </section>
 
-      {/* Main Hub Listing */}
-      <section className="space-y-6">
+      <section className="space-y-8">
         <div className="flex items-center justify-between px-4">
-          <h2 className="text-2xl font-black font-headline tracking-tighter flex items-center gap-2 uppercase">
-            <LayoutGrid className="h-6 w-6 text-primary" /> Hub Repository
+          <h2 className="text-2xl font-black flex items-center gap-2 uppercase tracking-tight">
+            <LayoutGrid className="h-6 w-6 text-primary" /> Discovery Hub
           </h2>
-          <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full">
+          <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Verified</span>
+            <span className="text-[9px] font-black text-emerald-700 uppercase">Secure</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 px-2">
+        <div className="grid grid-cols-1 gap-6 px-2">
           {loading ? (
-            [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 w-full rounded-[2.5rem]" />)
-          ) : apps && apps.length > 0 ? (
+            [1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full rounded-[2.5rem]" />)
+          ) : apps.length > 0 ? (
             apps.map((app) => (
-              <AppCard key={app.id} app={app} />
+              <AppCard key={app.id} app={app as any} />
             ))
           ) : (
             <div className="text-center py-20 bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-200">
               <Sparkles className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-              <p className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">No published binaries available.</p>
+              <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">No binaries published.</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Security Banner */}
       <section className="px-2">
-        <div className="bg-black rounded-[3rem] p-10 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full -mr-32 -mt-32 blur-3xl" />
-          <div className="relative z-10 flex items-center gap-6">
-            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0">
-              <ShieldCheck className="h-10 w-10 text-primary" />
+        <div className="bg-black rounded-[3rem] p-12 text-white relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full -mr-32 -mt-32 blur-3xl" />
+          <div className="relative z-10 flex items-center gap-8">
+            <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center shadow-inner">
+               <ShieldCheck className="h-12 w-12 text-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-black font-headline tracking-tight">Triple-Pass Encryption</h3>
-              <p className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] mt-1">Verified GitHub Sources Only</p>
+               <h3 className="text-2xl font-black tracking-tight leading-tight">Supabase Protected Distribution</h3>
+               <p className="text-[11px] font-black text-white/40 uppercase tracking-widest mt-2">Native Infrastructure Hosting v1.0</p>
             </div>
           </div>
         </div>
