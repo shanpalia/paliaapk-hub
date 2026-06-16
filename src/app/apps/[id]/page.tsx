@@ -142,6 +142,8 @@ function AppDetailsContent() {
     );
   }
 
+  const displayIcon = app.icon_url || `https://placehold.co/400x400/10b981/ffffff?text=${encodeURIComponent(app.app_name || 'App')}`;
+
   return (
     <main className="container mx-auto px-4 max-w-5xl py-8">
       <Link
@@ -158,10 +160,11 @@ function AppDetailsContent() {
         <div className="flex flex-col md:flex-row gap-10 relative z-10 items-center md:items-start">
           <div className="h-40 w-40 md:h-56 md:w-56 rounded-[3rem] shadow-2xl shadow-primary/20 overflow-hidden bg-white border-8 border-white flex-shrink-0 relative">
             <Image
-              src={app.icon_url || 'https://picsum.photos/seed/app/256/256'}
+              src={displayIcon}
               alt={app.app_name}
               fill
               className="object-cover h-full w-full"
+              unoptimized
             />
           </div>
 
@@ -258,6 +261,7 @@ function AppDetailsContent() {
                   alt="App Screenshot"
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  unoptimized
                 />
               </div>
             </section>

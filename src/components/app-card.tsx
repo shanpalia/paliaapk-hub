@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -12,7 +11,8 @@ interface AppCardProps {
 }
 
 export function AppCard({ app, variant = 'compact' }: AppCardProps) {
-  const displayIcon = app.icon_url || `https://picsum.photos/seed/${app.id}/200/200`;
+  // Use uploaded icon or a branded hub fallback
+  const displayIcon = app.icon_url || `https://placehold.co/200x200/10b981/ffffff?text=${encodeURIComponent(app.app_name || 'App')}`;
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
