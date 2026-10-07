@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview Autonomous Hub Description Generator.
  * Provides structured app store copy using a template engine to ensure 100% uptime.
