@@ -13,7 +13,7 @@ workflows:
 
     scripts:
       - name: Install npm dependencies
-        script: npm ci
+        script: npm install --no-audit --no-fund
 
       - name: Build Next.js web app
         script: npm run build
