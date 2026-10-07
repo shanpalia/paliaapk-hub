@@ -21,16 +21,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {useState, useEffect, Suspense} from 'react';
 import {supabase, AppData} from '@/lib/supabase';
-import {useParams, useRouter, useSearchParams} from 'next/navigation';
+import {useRouter, useSearchParams} from 'next/navigation';
 import {useToast} from '@/hooks/use-toast';
 import {useUser} from '@/firebase';
 
 function AppDetailsContent() {
-  const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const {toast} = useToast();
-  const id = params.id as string;
+  const id = searchParams.get('id') || '';
   const [app, setApp] = useState<AppData | null>(null);
   const [loading, setLoading] = useState(true);
   const {user} = useUser();
