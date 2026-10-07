@@ -1,0 +1,36 @@
+workflows:
+  paliaapk-hub-android:
+    name: PaliaAPK Hub Android Release
+    max_build_duration: 120
+    instance_type: linux_x2
+
+    environment:
+      android_signing:
+        - paliaapk-release
+      vars:
+        PACKAGE_NAME: "com.plkapkhub.store"
+      node: 22.11.0
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Build Next.js web app
+        script: npm run build
+
+      - name: Sync Capacitor Android project
+        script: npx cap sync android
+
+      - name: Set Android SDK location
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+
+      - name: Build signed Android APK
+        script: |
+          cd android
+          chmod +x gradlew
+          ./gradlew clean
+          ./gradlew assembleRelease
+
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/apk/release/output-metadata.json
