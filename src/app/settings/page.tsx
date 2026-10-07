@@ -44,7 +44,7 @@ export default function SettingsPage() {
 
   return <div className="space-y-8 pb-24">
     <section className="flex items-center gap-4 p-6 rounded-[2.5rem] bg-white border border-gray-100 shadow-sm">
-      <img src="/icon-512.png" alt="PaliaAPK Hub" className="h-20 w-20 rounded-[22.5%] shadow-lg" />
+      <img src="/paliaapk-hub-icon.svg" alt="PaliaAPK Hub" className="h-20 w-20 rounded-[22.5%] shadow-lg" />
       <div className="flex-1"><h1 className="text-2xl font-black">PaliaAPK Hub</h1><p className="text-sm text-muted-foreground font-medium">Developer by ShanPalia</p><p className="text-xs text-muted-foreground mt-1">Version {VERSION}</p></div>
     </section>
     <section className="p-6 rounded-[2.5rem] bg-gray-50 border border-gray-100 space-y-4">
