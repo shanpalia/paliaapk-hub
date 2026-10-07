@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview An AI agent that summarizes app descriptions into concise, feature-rich bullet points.
  *
