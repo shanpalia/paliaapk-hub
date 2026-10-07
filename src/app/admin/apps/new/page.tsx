@@ -25,10 +25,11 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { 
-  adminAutoGenerateAppDescription, 
-  AdminAutoGenerateAppDescriptionOutput 
-} from "@/ai/flows/admin-auto-generate-app-description";
+type AdminAutoGenerateAppDescriptionOutput = {
+  fullDescription: string;
+  seoSummary: string;
+  versionChangelog: string;
+};
 
 const CATEGORIES = ["Social", "Games", "Productivity", "Photography", "Tools", "Education", "Entertainment", "General"];
 
@@ -131,12 +132,11 @@ function AddOrUpdateAppForm() {
     
     setAiLoading(true);
     try {
-      const result = await adminAutoGenerateAppDescription({
-        appName: formData.appName,
-        appVersion: formData.version,
-        category: formData.category,
-        developer: formData.developer
-      });
+      const result: AdminAutoGenerateAppDescriptionOutput = {
+        fullDescription: `${formData.appName} is a premium application in the ${formData.category} category, developed by ${formData.developer}. Version ${formData.version} is optimized for a reliable Android experience with a clean interface and practical features.\\n\\n### Core Features\\n- Professional ${formData.category} tools and functionality.\\n- Optimized performance and modern interface.\\n- Verified distribution through PaliaAPK Hub.`,
+        seoSummary: `Download ${formData.appName} APK v${formData.version} by ${formData.developer} on PaliaAPK Hub.`,
+        versionChangelog: `- Official Version ${formData.version} release\\n- Performance and stability improvements\\n- PaliaAPK Hub distribution update`
+      };
       setAiResult(result);
       setShowAiPreview(true);
       toast({ title: "Draft Generated", description: "Hub Assistant has drafted a professional entry." });
