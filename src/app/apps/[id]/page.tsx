@@ -77,7 +77,7 @@ function AppDetailsContent() {
       const blob = new Blob(chunks, {type: 'application/vnd.android.package-archive'});
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = objectUrl; link.download = currentApp.apk_file_name || `${currentApp.app_name}.apk`;
+      link.href = objectUrl; link.download = `${currentApp.app_name}.apk`;
       document.body.appendChild(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
       toast({title: 'Download complete', description: `${received} bytes downloaded successfully.`});
