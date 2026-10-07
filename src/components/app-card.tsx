@@ -36,7 +36,7 @@ export function AppCard({ app, variant = 'compact' }: AppCardProps) {
 
   if (variant === 'large') {
     return (
-      <Link href={`/apps/${app.id}`} className="block group">
+      <Link href={`/apps?id=${encodeURIComponent(app.id)}`} className="block group">
         <div className="relative aspect-[21/10] rounded-[3rem] overflow-hidden mb-3 shadow-2xl transition-all active:scale-[0.98]">
           <Image
             src={app.icon_url}
@@ -64,7 +64,7 @@ export function AppCard({ app, variant = 'compact' }: AppCardProps) {
   }
 
   return (
-    <Link href={`/apps/${app.id}`} className="flex items-center gap-5 p-5 glass rounded-[2.5rem] transition-all group hover:shadow-xl hover:bg-white border border-gray-100/50">
+    <Link href={`/apps?id=${encodeURIComponent(app.id)}`} className="flex items-center gap-5 p-5 glass rounded-[2.5rem] transition-all group hover:shadow-xl hover:bg-white border border-gray-100/50">
       <div className="relative w-20 h-20 rounded-[1.75rem] overflow-hidden shadow-lg border border-white flex-shrink-0 bg-gray-50">
         <Image
           src={app.icon_url}
