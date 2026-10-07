@@ -23,6 +23,7 @@ import {useState, useEffect, Suspense} from 'react';
 import {supabase, AppData} from '@/lib/supabase';
 import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import {useToast} from '@/hooks/use-toast';
+import {useUser} from '@/firebase';
 
 function AppDetailsContent() {
   const params = useParams();
@@ -32,69 +33,61 @@ function AppDetailsContent() {
   const id = params.id as string;
   const [app, setApp] = useState<AppData | null>(null);
   const [loading, setLoading] = useState(true);
+  const {user} = useUser();
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
-  const [session, setSession] = useState<any>(null);
+  const [downloadedBytes, setDownloadedBytes] = useState(0);
+  const [totalBytes, setTotalBytes] = useState(0);
+  const [downloadSpeed, setDownloadSpeed] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async (currentApp: AppData) => {
-    if (!session) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please sign in to access premium APK downloads.',
-      });
+    if (!user) {
+      toast({title: 'Authentication Required', description: 'Please sign in before downloading this APK.'});
       router.push(`/auth/login?returnTo=/apps/${id}&action=download`);
       return;
     }
-
-    if (!currentApp) return;
-
+    if (!currentApp.apk_url || downloading) return;
+    setDownloading(true); setDownloadProgress(0); setDownloadedBytes(0); setTotalBytes(0); setDownloadSpeed(0);
     const newCount = (currentApp.downloads || 0) + 1;
     setApp(prev => prev ? {...prev, downloads: newCount} : null);
-
-    supabase
-      .from('apps')
-      .update({downloads: newCount})
-      .eq('id', id)
-      .then(({error}) => {
-        if (error) console.error('Failed to increment download count:', error);
-      });
-
-    setDownloadProgress(0);
-    const interval = setInterval(() => {
-      setDownloadProgress(prev => {
-        if (prev === null) return 0;
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setDownloadProgress(null);
-          }, 1500);
-
-          const link = document.createElement('a');
-          link.href = currentApp.apk_url;
-          link.download = currentApp.apk_file_name || `${currentApp.app_name}.apk`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          return 100;
+    void supabase.from('apps').update({downloads: newCount}).eq('id', id);
+    try {
+      const response = await fetch(currentApp.apk_url, {cache: 'no-store'});
+      if (!response.ok || !response.body) throw new Error('APK host does not allow readable streaming.');
+      const total = Number(response.headers.get('content-length') || 0);
+      setTotalBytes(total);
+      const reader = response.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let received = 0, lastBytes = 0, lastTime = performance.now();
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        chunks.push(value); received += value.byteLength;
+        const now = performance.now(); const elapsed = Math.max((now - lastTime) / 1000, 0.001);
+        if (elapsed >= 0.2) {
+          setDownloadedBytes(received);
+          setDownloadSpeed((received - lastBytes) / elapsed);
+          if (total > 0) setDownloadProgress(Math.min(100, received / total * 100));
+          lastBytes = received; lastTime = now;
         }
-        return prev + 10;
-      });
-    }, 80);
+      }
+      setDownloadedBytes(received);
+      if (total > 0) setDownloadProgress(100);
+      const blob = new Blob(chunks, {type: 'application/vnd.android.package-archive'});
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl; link.download = currentApp.apk_file_name || `${currentApp.app_name}.apk`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+      toast({title: 'Download complete', description: `${received} bytes downloaded successfully.`});
+    } catch (error) {
+      console.error('Real download failed', error);
+      setDownloadProgress(null);
+      toast({variant: 'destructive', title: 'Download blocked', description: 'The APK storage host must allow CORS/streaming for real progress and speed measurement.'});
+    } finally { setDownloading(false); setDownloadSpeed(0); }
   };
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({data: {session}}) => {
-      setSession(session);
-    });
-
-    const {
-      data: {subscription},
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     const fetchApp = async () => {
@@ -118,10 +111,10 @@ function AppDetailsContent() {
   }, [id]);
 
   useEffect(() => {
-    if (app && session && searchParams.get('action') === 'download' && !loading) {
+    if (app && user && searchParams.get('action') === 'download' && !loading) {
        handleDownload(app);
     }
-  }, [app, session, searchParams, loading]);
+  }, [app, user, searchParams, loading]);
 
   if (loading) {
     return (
@@ -211,23 +204,25 @@ function AppDetailsContent() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              {downloadProgress === null ? (
+              {!downloading ? (
                 <Button
                   onClick={() => handleDownload(app)}
                   size="lg"
                   className="flex-1 rounded-2xl h-20 text-2xl font-black shadow-2xl shadow-primary/30"
                 >
-                  {session ? <><Download className="mr-3 h-8 w-8" /> Download APK</> : <><Lock className="mr-3 h-8 w-8" /> Login to Download</>}
+                  {user ? <><Download className="mr-3 h-8 w-8" /> Download APK</> : <><Lock className="mr-3 h-8 w-8" /> Login to Download</>}
                 </Button>
               ) : (
                 <div className="flex-1 bg-muted/50 p-6 rounded-[2rem] border border-primary/10">
                   <div className="flex justify-between text-sm font-black mb-3 px-1">
-                    <span className="text-primary uppercase tracking-widest animate-pulse">
-                      Initializing Binary Transfer...
-                    </span>
-                    <span>{downloadProgress}%</span>
+                    <span className="text-primary uppercase tracking-widest">Real Download</span>
+                    <span>{totalBytes > 0 && downloadProgress !== null ? `${downloadProgress.toFixed(0)}%` : 'Streaming'}</span>
                   </div>
-                  <Progress value={downloadProgress} className="h-4 bg-white rounded-full" />
+                  <Progress value={totalBytes > 0 ? downloadProgress || 0 : undefined} className="h-4 bg-white rounded-full" />
+                  <div className="mt-3 flex justify-between text-xs font-bold text-muted-foreground">
+                    <span>{downloadedBytes} bytes{totalBytes ? ` / ${totalBytes} bytes` : ''}</span>
+                    <span>{downloadSpeed > 0 ? `${Math.round(downloadSpeed / 1024)} KB/s` : 'Measuring…'}</span>
+                  </div>
                 </div>
               )}
             </div>
