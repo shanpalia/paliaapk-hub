@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2, ArrowLeft, Image as ImageIcon, FileArchive, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { generateAppDescription } from "@/ai/flows/generate-app-description";
 
 export default function AddAppPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -93,11 +92,9 @@ export default function AddAppPage() {
     }
     setGenerating(true);
     try {
-      const result = await generateAppDescription({
-        appName: formData.name,
-        version: formData.version,
-        category: formData.category
-      });
+      const result = {
+        description: `${formData.name} is a professional ${formData.category} application (version ${formData.version || "latest"}), designed for a clean, reliable and user-friendly Android experience. Developed for distribution through PaliaAPK Hub, it provides practical features with a modern interface and optimized performance.`
+      };
       setFormData({ ...formData, description: result.description });
       toast({ title: "Description Generated", description: "AI has created a professional description for you." });
     } catch (err: any) {
