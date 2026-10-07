@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">PLKAPK Hub</string>
-    <string name="title_activity_main">PLKAPK Hub</string>
+    <string name="app_name">PaliaAPK Hub</string>
+    <string name="title_activity_main">PaliaAPK Hub</string>
     <string name="package_name">com.plkapkhub.store</string>
     <string name="custom_url_scheme">com.plkapkhub.store</string>
 </resources>
