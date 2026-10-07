@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { PWAProvider } from './pwa-provider';
 import { PWAInstallBanner } from '@/components/pwa-install-banner';
+import { CapacitorBackHandler } from '@/components/capacitor-back-handler';
 
 export const metadata: Metadata = {
   title: 'PaliaAPK Hub - Premium Android App Store',
@@ -52,6 +53,7 @@ export default function RootLayout({
       </head>
       <body className="font-body bg-white pb-24 max-w-screen-md mx-auto min-h-screen border-x border-gray-50 shadow-sm antialiased overflow-x-hidden">
         <FirebaseClientProvider>
+          <CapacitorBackHandler />
           <PWAProvider>
             <TopHeader />
             <main className="px-4 py-4 sm:px-6 md:px-8">
