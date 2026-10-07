@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: 'PaliaAPK Hub - Premium Android App Store',
   description: 'Download the latest verified APKs and games securely on PaliaAPK Hub.',
   applicationName: 'PaliaAPK Hub',
+  icons: { icon: '/paliaapk-hub-icon.svg', apple: '/paliaapk-hub-icon.svg' },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#00d2ff',
+  themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
