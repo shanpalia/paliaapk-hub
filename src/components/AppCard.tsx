@@ -36,7 +36,7 @@ export function AppCard({ app }: AppCardProps) {
   return (
     <Card className="group relative overflow-hidden border border-border/50 bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 rounded-[1.5rem] flex flex-col">
       <CardContent className="p-4 flex flex-col h-full">
-        <Link href={`/apps/${app.id}`} className="flex-1">
+        <Link href={`/apps?id=${encodeURIComponent(app.id)}`} className="flex-1">
           <div className="flex items-start gap-4 mb-4">
             <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl shadow-sm bg-muted border border-border/20">
               <Image
