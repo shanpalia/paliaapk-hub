@@ -19,7 +19,16 @@ workflows:
         script: npm run build
 
       - name: Sync Capacitor Android project
-        script: npx cap sync android
+        script: |
+          npx cap sync android
+          test -f android/capacitor-cordova-android-plugins/build.gradle || {
+            echo "Capacitor sync did not generate capacitor-cordova-android-plugins"
+            exit 1
+          }
+          test -f node_modules/@capacitor/android/capacitor/build.gradle || {
+            echo "Capacitor Android Gradle project is missing"
+            exit 1
+          }
 
       - name: Set Android SDK location
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
