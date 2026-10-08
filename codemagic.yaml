@@ -27,6 +27,8 @@ workflows:
       - name: Build signed Android APK
         script: |
           cd android
+          # Recreate the Gradle Wrapper because the repository does not contain gradle-wrapper.jar.
+          gradle wrapper --gradle-version 8.2
           chmod +x gradlew
           ./gradlew clean
           ./gradlew assembleRelease
