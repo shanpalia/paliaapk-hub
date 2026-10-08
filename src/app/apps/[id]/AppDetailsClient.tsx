@@ -42,16 +42,17 @@ function AppDetailsContent() {
   const handleDownload = async (currentApp: AppData) => {
     if (!user) {
       toast({title: 'Authentication Required', description: 'Please sign in before downloading this APK.'});
-      router.push(`/auth/login?returnTo=/apps/${id}&action=download`);
+      router.push(`/auth/login?returnTo=${encodeURIComponent(`/apps?id=${id}`)}&action=download`);
       return;
     }
     if (!currentApp.apk_url || downloading) return;
     setDownloading(true); setDownloadProgress(0); setDownloadedBytes(0); setTotalBytes(0); setDownloadSpeed(0);
-    const newCount = (currentApp.downloads || 0) + 1;
-    setApp(prev => prev ? {...prev, downloads: newCount} : null);
-    void supabase.from('apps').update({downloads: newCount}).eq('id', id);
+    
     try {
-      const response = await fetch(currentApp.apk_url, {cache: 'no-store'});
+      const downloadUrl = currentApp.apk_url.includes('?')
+        ? `${currentApp.apk_url}&download=${encodeURIComponent(currentApp.app_name)}.apk`
+        : `${currentApp.apk_url}?download=${encodeURIComponent(currentApp.app_name)}.apk`;
+      const response = await fetch(downloadUrl, { cache: 'no-store', redirect: 'follow' });
       if (!response.ok || !response.body) throw new Error('APK host does not allow readable streaming.');
       const total = Number(response.headers.get('content-length') || 0);
       setTotalBytes(total);
@@ -74,6 +75,15 @@ function AppDetailsContent() {
       setDownloadedBytes(received);
       if (total > 0) setDownloadProgress(100);
       const blob = new Blob(chunks, {type: 'application/vnd.android.package-archive'});
+      // Count a download only after the APK has actually finished downloading.
+      const newCount = (currentApp.downloads || 0) + 1;
+      setApp(prev => prev ? { ...prev, downloads: newCount } : null);
+      const { error: countError } = await supabase
+        .from('apps')
+        .update({ downloads: newCount })
+        .eq('id', currentApp.id);
+      if (countError) console.warn('Download count update failed:', countError);
+
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = objectUrl; link.download = `${currentApp.app_name}.apk`;
@@ -220,7 +230,7 @@ function AppDetailsContent() {
                   <Progress value={totalBytes > 0 ? downloadProgress || 0 : undefined} className="h-4 bg-white rounded-full" />
                   <div className="mt-3 flex justify-between text-xs font-bold text-muted-foreground">
                     <span>{downloadedBytes} bytes{totalBytes ? ` / ${totalBytes} bytes` : ''}</span>
-                    <span>{downloadSpeed > 0 ? `${Math.round(downloadSpeed / 1024)} KB/s` : 'Measuring…'}</span>
+                    <span>{downloadSpeed > 0 ? (downloadSpeed >= 1024 * 1024 ? `${(downloadSpeed / 1024 / 1024).toFixed(1)} MB/s` : `${Math.round(downloadSpeed / 1024)} KB/s`) : 'Measuring…'}</span>
                   </div>
                 </div>
               )}
