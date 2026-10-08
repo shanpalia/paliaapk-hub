@@ -33,6 +33,10 @@ workflows:
             echo "Capacitor Status Bar Gradle project is missing"
             exit 1
           }
+          test -f node_modules/@capacitor/app/android/build.gradle || {
+            echo "Capacitor App Gradle project is missing"
+            exit 1
+          }
 
       - name: Set Android SDK location
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
