@@ -42,8 +42,24 @@ jobs:
         run: npx cap sync android
 
       - name: Build debug APK
+        id: android_build
+        continue-on-error: true
         working-directory: android
-        run: gradle --no-daemon clean assembleDebug
+        run: |
+          set -o pipefail
+          gradle --no-daemon clean assembleDebug --stacktrace 2>&1 | tee ../gradle-build.log
+
+      - name: Upload Gradle diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paliaapk-hub-gradle-diagnostic
+          path: gradle-build.log
+          if-no-files-found: warn
+
+      - name: Fail if Android build failed
+        if: steps.android_build.outcome == 'failure'
+        run: exit 1
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
