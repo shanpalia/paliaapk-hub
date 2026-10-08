@@ -127,9 +127,12 @@ export default function EditAppPage() {
     }
     setGenerating(true);
     try {
-      const result = {\n        description: `${formData.name} is a professional ${formData.category} application (version ${formData.version || "latest"}), designed for a clean, reliable and user-friendly Android experience. Developed for distribution through PaliaAPK Hub, it provides practical features with a modern interface and optimized performance.`\n      };\n      setFormData({ ...formData, description: result.description });\n      toast({ title: "Description Updated", description: "Professional description generated successfully." });
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "AI Error", description: "Could not generate description." });
+      const result = {
+        description: `${formData.name} is a professional ${formData.category} application (version ${formData.version || "latest"}), designed for a clean, reliable and user-friendly Android experience. Developed for distribution through PaliaAPK Hub, it provides practical features with a modern interface and optimized performance.`
+      };
+      setFormData({ ...formData, description: result.description });
+      toast({ title: "Description Updated", description: "Professional description generated successfully." });
+          toast({ variant: "destructive", title: "AI Error", description: "Could not generate description." });
     } finally {
       setGenerating(false);
     }
