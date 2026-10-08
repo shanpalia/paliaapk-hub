@@ -27,11 +27,10 @@ workflows:
       - name: Build signed Android APK
         script: |
           cd android
-          # Recreate the Gradle Wrapper because the repository does not contain gradle-wrapper.jar.
-          gradle wrapper --gradle-version 8.2
-          chmod +x gradlew
-          ./gradlew clean
-          ./gradlew assembleRelease
+          # Use Codemagic's installed Gradle so the build does not depend on a checked-in wrapper JAR.
+          gradle --version
+          gradle clean
+          gradle assembleRelease
 
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
