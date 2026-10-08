@@ -17,7 +17,10 @@ android {
     }
     signingConfigs {
         release {
-            if (System.getenv("CI")) {
+            if (System.getenv("CM_KEYSTORE_PATH") &&
+                System.getenv("CM_KEYSTORE_PASSWORD") &&
+                System.getenv("CM_KEY_ALIAS") &&
+                System.getenv("CM_KEY_PASSWORD")) {
                 storeFile file(System.getenv("CM_KEYSTORE_PATH"))
                 storePassword System.getenv("CM_KEYSTORE_PASSWORD")
                 keyAlias System.getenv("CM_KEY_ALIAS")
