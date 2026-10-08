@@ -19,13 +19,41 @@ export default function SearchPage() {
     const value = query.trim(); if (!value) { setResults([]); setLoading(false); return; }
     const timer = setTimeout(async () => {
       setLoading(true);
-      const safe = value.replace(/[%_]/g, ''); const pattern = '%' + safe + '%';
+      const safe = value.trim().replace(/[%_]/g, '');
+      const pattern = `%${safe}%`;
       try {
-        const { data, error } = await supabase.from('apps').select('*').or('app_name.ilike.' + pattern + ',developer.ilike.' + pattern + ',category.ilike.' + pattern + ',description.ilike.' + pattern).order('created_at', { ascending: false }).limit(30);
-        if (error) throw error;
-        setResults((data || []).filter((app: AppData) => app.is_hidden !== true));
-      } catch (error) { console.error('Search failed', error); setResults([]); }
-      finally { setLoading(false); }
+        // Run independent filters instead of a fragile PostgREST .or() expression.
+        const fields = ['app_name', 'developer', 'category', 'description'] as const;
+        const responses = await Promise.all(
+          fields.map((field) =>
+            supabase
+              .from('apps')
+              .select('*')
+              .ilike(field, pattern)
+              .order('created_at', { ascending: false })
+              .limit(30)
+          )
+        );
+        const firstError = responses.find((response) => response.error)?.error;
+        if (firstError) throw firstError;
+
+        const unique = new Map<string, AppData>();
+        for (const response of responses) {
+          for (const app of (response.data || []) as AppData[]) {
+            if (app.is_hidden !== true) unique.set(app.id, app);
+          }
+        }
+        setResults(
+          Array.from(unique.values())
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 30)
+        );
+      } catch (error) {
+        console.error('Search failed', error);
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
     }, 250);
     return () => clearTimeout(timer);
   }, [query]);
