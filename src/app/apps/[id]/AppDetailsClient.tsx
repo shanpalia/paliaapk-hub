@@ -120,10 +120,18 @@ function AppDetailsContent() {
   }, [id]);
 
   useEffect(() => {
-    if (app && user && searchParams.get('action') === 'download' && !loading) {
-       handleDownload(app);
+    if (!id || loading || searchParams.get('action') !== 'download') return;
+
+    if (!user) {
+      const returnTo = encodeURIComponent(`/apps?id=${id}`);
+      router.replace(`/auth/login?returnTo=${returnTo}&action=download`);
+      return;
     }
-  }, [app, user, searchParams, loading]);
+
+    if (app) {
+      handleDownload(app);
+    }
+  }, [app, user, searchParams, loading, id]);
 
   if (loading) {
     return (
