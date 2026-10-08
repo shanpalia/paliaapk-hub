@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2, ArrowLeft, Save, Image as ImageIcon, FileArchive, Sparkles, X, Home } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { generateAppDescription } from "@/ai/flows/generate-app-description";
 
 export default function EditAppPage() {
   const searchParams = useSearchParams();
@@ -128,13 +127,7 @@ export default function EditAppPage() {
     }
     setGenerating(true);
     try {
-      const result = await generateAppDescription({
-        appName: formData.name,
-        version: formData.version,
-        category: formData.category
-      });
-      setFormData({ ...formData, description: result.description });
-      toast({ title: "Description Updated", description: "AI rewrite applied successfully." });
+      const result = {\n        description: `${formData.name} is a professional ${formData.category} application (version ${formData.version || "latest"}), designed for a clean, reliable and user-friendly Android experience. Developed for distribution through PaliaAPK Hub, it provides practical features with a modern interface and optimized performance.`\n      };\n      setFormData({ ...formData, description: result.description });\n      toast({ title: "Description Updated", description: "Professional description generated successfully." });
     } catch (err: any) {
       toast({ variant: "destructive", title: "AI Error", description: "Could not generate description." });
     } finally {
