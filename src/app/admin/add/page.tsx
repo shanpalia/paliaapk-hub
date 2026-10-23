@@ -15,6 +15,33 @@ import { Upload, Loader2, ArrowLeft, Image as ImageIcon, FileArchive, Sparkles, 
 import Link from "next/link";
 import Image from "next/image";
 
+async function compressImageForStorage(file: File, maxDimension: number, quality: number): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      bitmap.close();
+      return file;
+    }
+    context.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+    if (!blob || blob.size >= file.size) return file;
+    const baseName = file.name.replace(/\\.[^.]+$/, "");
+    return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
+  } catch (error) {
+    console.warn("Image compression unavailable; uploading original image.", error);
+    return file;
+  }
+}
+
 export default function AddAppPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -116,11 +143,11 @@ export default function AddAppPage() {
       // 1. Upload Icon
       phase = "Uploading App Icon (Bucket: app-icons)";
       setCurrentPhase(phase);
-      const iconExt = imageFile!.name.split('.').pop();
-      const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${iconExt}`;
+      const optimizedIcon = await compressImageForStorage(imageFile!, 256, 0.78);
+      const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedIcon.type === "image/webp" ? "webp" : (optimizedIcon.name.split('.').pop() || "img")}`;
       const { data: iconData, error: iconError } = await supabase.storage
         .from('app-icons')
-        .upload(iconPath, imageFile!);
+        .upload(iconPath, optimizedIcon, { contentType: optimizedIcon.type || imageFile!.type, cacheControl: "31536000" });
       
       if (iconError) {
         console.error("Phase Error: Icon Upload", iconError);
@@ -153,9 +180,9 @@ export default function AddAppPage() {
       if (screenshotFile) {
         phase = "Uploading Screenshot (Bucket: screenshots)";
         setCurrentPhase(phase);
-        const ssExt = screenshotFile.name.split('.').pop();
-        const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ssExt}`;
-        const { error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, screenshotFile);
+        const optimizedScreenshot = await compressImageForStorage(screenshotFile, 1280, 0.76);
+        const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedScreenshot.type === "image/webp" ? "webp" : (optimizedScreenshot.name.split('.').pop() || "img")}`;
+        const { error: ssError } = await supabase.storage.from('screenshots').upload(ssPath, optimizedScreenshot, { contentType: optimizedScreenshot.type || screenshotFile.type, cacheControl: "31536000" });
         
         if (ssError) {
           console.error("Phase Error: Screenshot Upload", ssError);
