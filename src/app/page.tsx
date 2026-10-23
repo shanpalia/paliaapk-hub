@@ -23,37 +23,67 @@ export default function Home() {
   const fetchApps = async () => {
     setLoading(true);
     setErrorInfo(null);
+
+    const cacheKey = "paliaapk-hub-apps-cache-v1";
+    const readCachedApps = (): AppData[] => {
+      try {
+        const raw = window.localStorage.getItem(cacheKey);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter((app) => app && app.id && app.app_name) : [];
+      } catch {
+        return [];
+      }
+    };
+
+    const useFallback = async (): Promise<AppData[]> => {
+      // Optional public JSON snapshot for first-time visitors when Supabase is unavailable.
+      try {
+        const response = await fetch("/apps-backup.json", { cache: "no-store" });
+        if (response.ok) {
+          const payload = await response.json();
+          const rows = Array.isArray(payload) ? payload : payload?.apps;
+          if (Array.isArray(rows)) {
+            const valid = rows.filter((app: any) => app && app.id && app.app_name && app.is_hidden !== true) as AppData[];
+            if (valid.length) {
+              try { window.localStorage.setItem(cacheKey, JSON.stringify(valid)); } catch { /* storage may be full */ }
+              return valid;
+            }
+          }
+        }
+      } catch (backupError) {
+        console.warn("Public app snapshot unavailable; trying saved cache.", backupError);
+      }
+      return readCachedApps().filter((app) => app.is_hidden !== true);
+    };
+
     try {
       console.log("Hub Discovery: Scanning registry...");
-      
-      // Attempt to fetch apps. We query the table broadly and handle filtering in-memory
-      // to avoid hard SQL errors if the 'is_hidden' column is missing from the schema.
       const { data, error } = await supabase
-        .from('apps')
-        .select('id, app_name, version, icon_url, category, is_featured, is_hidden, created_at')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        const technicalMsg = error.message || error.details || "Unknown Supabase Protocol Error";
-        console.error("Hub Discovery: Supabase query fault", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        setErrorInfo(technicalMsg);
-        return;
-      }
+        .from("apps")
+        .select("id, app_name, version, description, icon_url, apk_url, apk_file_name, screenshot_url, downloads, created_at, category, developer, whats_new, is_featured, package_name, apk_size, is_hidden")
+        .order("created_at", { ascending: false });
 
-      if (data) {
-        // Filter hidden apps in-memory to ensure UI resilience
-        const publishedApps = data.filter(app => app.is_hidden !== true);
-        console.log(`Hub Discovery: Found ${publishedApps.length} published binaries.`);
-        setApps(publishedApps);
+      if (error) throw error;
+
+      const publishedApps = (data || []).filter((app) => app.is_hidden !== true) as AppData[];
+      setApps(publishedApps);
+      try {
+        window.localStorage.setItem(cacheKey, JSON.stringify(publishedApps));
+      } catch (cacheError) {
+        console.warn("Could not save app cache.", cacheError);
       }
     } catch (err: any) {
-      console.error("Hub Discovery: Critical repository scan failed", err);
-      setErrorInfo(err.message || "Critical Discovery Failure");
+      console.error("Hub Discovery: Supabase unavailable; attempting fallback.", err);
+      const fallbackApps = await useFallback();
+      if (fallbackApps.length > 0) {
+        setApps(fallbackApps);
+        setErrorInfo(null);
+        console.warn("Hub Discovery: Loaded cached/public backup app data.");
+      } else {
+        setApps([]);
+        setErrorInfo("Live database unavailable and no saved app backup is available on this device yet.");
+      }
     } finally {
       setLoading(false);
     }
