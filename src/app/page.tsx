@@ -30,7 +30,7 @@ export default function Home() {
       // to avoid hard SQL errors if the 'is_hidden' column is missing from the schema.
       const { data, error } = await supabase
         .from('apps')
-        .select('*')
+        .select('id, app_name, version, icon_url, category, is_featured, is_hidden, created_at')
         .order('created_at', { ascending: false });
       
       if (error) {
