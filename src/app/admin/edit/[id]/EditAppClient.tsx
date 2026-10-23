@@ -34,7 +34,7 @@ async function compressImageForStorage(file: File, maxDimension: number, quality
     bitmap.close();
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
     if (!blob || blob.size >= file.size) return file;
-    const baseName = file.name.replace(/\\.[^.]+$/, "");
+    const baseName = file.name.replace(/\.[^.]+$/, "");
     return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
   } catch (error) {
     console.warn("Image compression unavailable; uploading original image.", error);
