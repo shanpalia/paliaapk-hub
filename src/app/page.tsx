@@ -59,14 +59,38 @@ export default function Home() {
 
     try {
       console.log("Hub Discovery: Scanning registry...");
+      // Match the live Supabase schema (public.apps uses name, screenshots, featured).
       const { data, error } = await supabase
         .from("apps")
-        .select("id, app_name, version, description, icon_url, apk_url, apk_file_name, screenshot_url, downloads, created_at, category, developer, whats_new, is_featured, package_name, apk_size, is_hidden")
+        .select("id, name, package_name, version, developer, category, description, whats_new, icon_url, apk_url, screenshots, downloads, created_at, featured, apk_size, banner_url, update_available, previous_version, release_notes")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      const publishedApps = (data || []).filter((app) => app.is_hidden !== true) as AppData[];
+      const publishedApps: AppData[] = (data || []).map((row: any) => {
+        const rawScreenshots = row.screenshots;
+        const screenshotUrl = Array.isArray(rawScreenshots)
+          ? (typeof rawScreenshots[0] === "string" ? rawScreenshots[0] : rawScreenshots[0]?.url || rawScreenshots[0]?.src || "")
+          : (typeof rawScreenshots === "string" ? rawScreenshots : "");
+        return {
+          id: row.id,
+          app_name: row.name || row.package_name || "Untitled app",
+          version: row.version || "",
+          description: row.description || "",
+          icon_url: row.icon_url || "",
+          apk_url: row.apk_url || "",
+          screenshot_url: screenshotUrl,
+          downloads: Number(row.downloads || 0),
+          created_at: row.created_at || "",
+          category: row.category || "General",
+          developer: row.developer || "",
+          whats_new: row.whats_new || row.release_notes || "",
+          is_featured: row.featured === true,
+          package_name: row.package_name || "",
+          apk_size: row.apk_size || "",
+          is_hidden: false,
+        };
+      });
       setApps(publishedApps);
       try {
         window.localStorage.setItem(cacheKey, JSON.stringify(publishedApps));
