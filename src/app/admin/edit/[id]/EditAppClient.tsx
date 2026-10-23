@@ -42,6 +42,21 @@ async function compressImageForStorage(file: File, maxDimension: number, quality
   }
 }
 
+async function uploadImageToTelegram(file: File): Promise<string> {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.access_token) throw new Error("Please sign in again before uploading images.");
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch("https://paliaapk-telegram-media.onrender.com/media", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    body,
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result?.url) throw new Error(result?.error || "Telegram image upload failed.");
+  return result.url as string;
+}
+
 export default function EditAppPage() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") || "";
@@ -188,10 +203,7 @@ export default function EditAppPage() {
         setCurrentPhase(phase);
         const optimizedIcon = await compressImageForStorage(imageFile, 256, 0.78);
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedIcon.type === "image/webp" ? "webp" : (optimizedIcon.name.split('.').pop() || "img")}`;
-        const { error } = await supabase.storage.from('app-icons').upload(path, optimizedIcon, { contentType: optimizedIcon.type || imageFile.type, cacheControl: "31536000" });
-        if (error) throw { ...error, phase };
-        const { data: { publicUrl } } = supabase.storage.from('app-icons').getPublicUrl(path);
-        icon_url = publicUrl;
+        icon_url = await uploadImageToTelegram(optimizedIcon);
       }
       setUploadProgress(30);
 
@@ -215,10 +227,7 @@ export default function EditAppPage() {
         setCurrentPhase(phase);
         const optimizedScreenshot = await compressImageForStorage(screenshotFile, 1280, 0.76);
         const path = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedScreenshot.type === "image/webp" ? "webp" : (optimizedScreenshot.name.split('.').pop() || "img")}`;
-        const { error } = await supabase.storage.from('screenshots').upload(path, optimizedScreenshot, { contentType: optimizedScreenshot.type || screenshotFile.type, cacheControl: "31536000" });
-        if (error) throw { ...error, phase };
-        const { data: { publicUrl } } = supabase.storage.from('screenshots').getPublicUrl(path);
-        screenshotUrl = publicUrl;
+        screenshotUrl = await uploadImageToTelegram(optimizedScreenshot);
       }
       setUploadProgress(85);
 
