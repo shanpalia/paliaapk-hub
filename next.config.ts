@@ -20,6 +20,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'paliaapk-telegram-media.onrender.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'images.unsplash.com',
         port: '',
         pathname: '/**',
