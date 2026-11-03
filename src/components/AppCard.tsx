@@ -11,9 +11,10 @@ import { CloudflareApp, cloudflareApi } from "@/lib/cloudflare-api";
 
 interface AppCardProps {
   app: CloudflareApp;
+  variant?: "large";
 }
 
-export function AppCard({ app }: AppCardProps) {
+export function AppCard({ app, variant }: AppCardProps) {
   const router = useRouter();
 
   const handleDownloadClick = async (e: React.MouseEvent) => {
@@ -31,21 +32,21 @@ export function AppCard({ app }: AppCardProps) {
   };
 
   return (
-    <Card className="group relative overflow-hidden border border-border/50 bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 rounded-[1.5rem] flex flex-col">
-      <CardContent className="p-4 flex flex-col h-full">
+    <Card className={`group relative overflow-hidden border border-border/50 bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 rounded-[1.5rem] flex flex-col ${variant === "large" ? "rounded-[2rem]" : ""}`}>
+      <CardContent className={variant === "large" ? "p-5 flex flex-col h-full" : "p-4 flex flex-col h-full"}>
         <Link href={`/apps?id=${encodeURIComponent(app.id)}`} className="flex-1">
           <div className="flex items-start gap-4 mb-4">
-            <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl shadow-sm bg-muted border border-border/20">
+            <div className={`relative ${variant === "large" ? "h-24 w-24" : "h-20 w-20"} flex-shrink-0 overflow-hidden rounded-2xl shadow-sm bg-muted border border-border/20`}>
               <Image
                 src={app.icon_url || `https://picsum.photos/seed/${app.id}/200/200`}
                 alt={app.app_name}
-                width={80}
-                height={80}
+                width={variant === "large" ? 96 : 80}
+                height={variant === "large" ? 96 : 80}
                 className="object-cover transition-transform duration-500 group-hover:scale-110"
               />
             </div>
             <div className="flex flex-col justify-center overflow-hidden">
-              <h3 className="line-clamp-1 font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+              <h3 className={`line-clamp-1 font-bold ${variant === "large" ? "text-xl" : "text-lg"} text-foreground group-hover:text-primary transition-colors`}>
                 {app.app_name}
               </h3>
               <p className="text-xs font-semibold text-primary/80 uppercase tracking-wider mt-0.5">{app.category}</p>
