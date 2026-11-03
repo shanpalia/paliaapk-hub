@@ -15,30 +15,46 @@ import { Upload, Loader2, ArrowLeft, Image as ImageIcon, FileArchive, Sparkles, 
 import Link from "next/link";
 import Image from "next/image";
 
-async function compressImageForStorage(file: File, maxDimension: number, quality: number): Promise<File> {
+async function compressImageForStorage(file: File, maxDimension: number, quality: number, maxBytes: number): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
+  let bitmap: ImageBitmap | null = null;
   try {
-    const bitmap = await createImageBitmap(file);
+    bitmap = await createImageBitmap(file);
     const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
-    const width = Math.max(1, Math.round(bitmap.width * scale));
-    const height = Math.max(1, Math.round(bitmap.height * scale));
+    let width = Math.max(1, Math.round(bitmap.width * scale));
+    let height = Math.max(1, Math.round(bitmap.height * scale));
     const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
     const context = canvas.getContext("2d");
-    if (!context) {
-      bitmap.close();
-      return file;
+    if (!context) return file;
+
+    let bestBlob: Blob | null = null;
+    for (let sizePass = 0; sizePass < 4; sizePass++) {
+      canvas.width = width;
+      canvas.height = height;
+      context.clearRect(0, 0, width, height);
+      context.drawImage(bitmap, 0, 0, width, height);
+      for (const q of [quality, 0.68, 0.58, 0.48, 0.38]) {
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", q));
+        if (!blob) continue;
+        if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+        if (blob.size <= maxBytes) {
+          const baseName = file.name.replace(/\.[^.]+$/, "");
+          return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
+        }
+      }
+      width = Math.max(1, Math.round(width * 0.82));
+      height = Math.max(1, Math.round(height * 0.82));
     }
-    context.drawImage(bitmap, 0, 0, width, height);
-    bitmap.close();
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
-    if (!blob || blob.size >= file.size) return file;
-    const baseName = file.name.replace(/\.[^.]+$/, "");
-    return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
+    if (bestBlob) {
+      const baseName = file.name.replace(/\.[^.]+$/, "");
+      return new File([bestBlob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
+    }
+    return file;
   } catch (error) {
     console.warn("Image compression unavailable; uploading original image.", error);
     return file;
+  } finally {
+    bitmap?.close();
   }
 }
 
@@ -158,7 +174,7 @@ export default function AddAppPage() {
       // 1. Upload Icon
       phase = "Uploading App Icon (Bucket: app-icons)";
       setCurrentPhase(phase);
-      const optimizedIcon = await compressImageForStorage(imageFile!, 256, 0.78);
+      const optimizedIcon = await compressImageForStorage(imageFile!, 512, 0.82, 200 * 1024);
       const iconPath = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedIcon.type === "image/webp" ? "webp" : (optimizedIcon.name.split('.').pop() || "img")}`;
       const iconUrl = await uploadImageToTelegram(optimizedIcon);
       setUploadProgress(30);
@@ -186,7 +202,7 @@ export default function AddAppPage() {
       if (screenshotFile) {
         phase = "Uploading Screenshot (Bucket: screenshots)";
         setCurrentPhase(phase);
-        const optimizedScreenshot = await compressImageForStorage(screenshotFile, 1280, 0.76);
+        const optimizedScreenshot = await compressImageForStorage(screenshotFile, 1600, 0.80, 300 * 1024);
         const ssPath = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedScreenshot.type === "image/webp" ? "webp" : (optimizedScreenshot.name.split('.').pop() || "img")}`;
         screenshotUrl = await uploadImageToTelegram(optimizedScreenshot);
       }
