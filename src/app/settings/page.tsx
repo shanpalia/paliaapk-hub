@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, Smartphone, Sparkles, ShieldCheck, ExternalLink, LogIn, LogOut, Loader2 } from 'lucide-react';
 import { cloudflareApi, CloudflareApp } from '@/lib/cloudflare-api';
-import { AppCard } from '@/components/app-card';
+import { AppCard } from '@/components/AppCard';
 import { Button } from '@/components/ui/button';
 import { useAuth, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
