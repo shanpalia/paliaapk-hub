@@ -170,18 +170,8 @@ export default function AddAppPage() {
       phase = "Uploading APK Package (Bucket: apk-files)";
       setCurrentPhase(phase);
       const apkOriginalName = apkFile!.name;
-      const apkExt = apkOriginalName.split('.').pop();
-      const apkPath = `${Date.now()}-${Math.random().toString(36).substring(7)}.${apkExt}`;
-      const { data: apkData, error: apkError } = await supabase.storage
-        .from('apk-files')
-        .upload(apkPath, apkFile!);
-      
-      if (apkError) {
-        console.error("Phase Error: APK Upload", apkError);
-        throw { ...apkError, phase };
-      }
-
-      const { data: { publicUrl: apkUrl } } = supabase.storage.from('apk-files').getPublicUrl(apkPath);
+      const apkResult = await cloudflareApi.upload(apkFile!, "apk");
+      const apkUrl = apkResult.url;
       setUploadProgress(60);
 
       // 3. Optional Screenshot
