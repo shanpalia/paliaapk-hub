@@ -20,7 +20,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import {useState, useEffect, Suspense} from 'react';
-import {supabase, AppData} from '@/lib/supabase';
+import {cloudflareApi, CloudflareApp} from '@/lib/cloudflare-api';
 import {useRouter, useSearchParams} from 'next/navigation';
 import {useToast} from '@/hooks/use-toast';
 import {useUser} from '@/firebase';
@@ -30,7 +30,7 @@ function AppDetailsContent() {
   const searchParams = useSearchParams();
   const {toast} = useToast();
   const id = searchParams.get('id') || '';
-  const [app, setApp] = useState<AppData | null>(null);
+  const [app, setApp] = useState<CloudflareApp | null>(null);
   const [loading, setLoading] = useState(true);
   const {user} = useUser();
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
@@ -78,11 +78,12 @@ function AppDetailsContent() {
       // Count a download only after the APK has actually finished downloading.
       const newCount = (currentApp.downloads || 0) + 1;
       setApp(prev => prev ? { ...prev, downloads: newCount } : null);
-      const { error: countError } = await supabase
-        .from('apps')
-        .update({ downloads: newCount })
-        .eq('id', currentApp.id);
-      if (countError) console.warn('Download count update failed:', countError);
+      try {
+        const countResult = await cloudflareApi.incrementDownload(currentApp.id);
+        setApp(prev => prev ? { ...prev, downloads: countResult.downloads } : null);
+      } catch (countError) {
+        console.warn('Download count update failed:', countError);
+      }
 
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -101,14 +102,8 @@ function AppDetailsContent() {
   useEffect(() => {
     const fetchApp = async () => {
       try {
-        const {data, error} = await supabase
-          .from('apps')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-        setApp(data);
+        const result = await cloudflareApi.getApp(id);
+        setApp(result.app);
       } catch (err) {
         console.error('Error fetching app details:', err);
       } finally {
