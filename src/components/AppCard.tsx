@@ -34,7 +34,7 @@ export function AppCard({ app, variant }: AppCardProps) {
   return (
     <Card className={`group relative overflow-hidden border border-border/50 bg-card hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 rounded-[1.5rem] flex flex-col ${variant === "large" ? "rounded-[2rem]" : ""}`}>
       <CardContent className={variant === "large" ? "p-5 flex flex-col h-full" : "p-4 flex flex-col h-full"}>
-        <Link href={`/apps?id=${encodeURIComponent(app.id)}`} className="flex-1">
+        <Link href={`/app/${encodeURIComponent(app.id)}`} className="flex-1">
           <div className="flex items-start gap-4 mb-4">
             <div className={`relative ${variant === "large" ? "h-24 w-24" : "h-20 w-20"} flex-shrink-0 overflow-hidden rounded-2xl shadow-sm bg-muted border border-border/20`}>
               <Image
