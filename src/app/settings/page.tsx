@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { RefreshCw, Smartphone, Sparkles, ShieldCheck, ExternalLink, LogIn, LogOut, Loader2 } from 'lucide-react';
-import { AppData, supabase } from '@/lib/supabase';
+import { cloudflareApi, CloudflareApp } from '@/lib/cloudflare-api';
 import { AppCard } from '@/components/app-card';
 import { Button } from '@/components/ui/button';
 import { useAuth, useUser } from '@/firebase';
@@ -17,12 +17,11 @@ export default function SettingsPage() {
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [apps, setApps] = useState<AppData[]>([]);
+  const [apps, setApps] = useState<CloudflareApp[]>([]);
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {
-    supabase.from('apps').select('*').order('downloads', { ascending: false }).limit(3)
-      .then(({ data }) => setApps((data || []).filter(a => a.is_hidden !== true)));
+    cloudflareApi.listApps().then(({ apps }) => setApps((apps || []).filter(a => !a.is_hidden).sort((a,b) => (b.downloads || 0) - (a.downloads || 0)).slice(0,3))).catch(console.error);
   }, []);
 
   const checkForUpdates = async () => {
