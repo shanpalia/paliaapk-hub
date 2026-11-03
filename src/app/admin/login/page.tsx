@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useAuth } from "@/firebase";
 import { HexagonLogo } from "@/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ export default function AdminLoginPage() {
   const [verifyingUser, setVerifyingUser] = useState<{ email: string; role: string | null } | null>(null);
   
   const router = useRouter();
+  const auth = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,24 +33,13 @@ export default function AdminLoginPage() {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      const user = data.user;
-      
-      const { data: profile } = await supabase
-        .from('users')
-        .select('role')
-        .eq('uid', user.uid)
-        .single();
-      
-      const role = profile?.role || 'user';
+      if (!auth) throw new Error("Firebase Authentication is not ready.");
+      const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const user = credential.user;
+      const role = user.email?.toLowerCase() === TEST_ADMIN_EMAIL ? "admin" : "user";
       setVerifyingUser({ email: user.email || "Anonymous", role });
 
-      if (user.email?.toLowerCase() === TEST_ADMIN_EMAIL || role === "admin") {
+      if (role === "admin") {
         toast({ 
           title: "Access Authorized", 
           description: `Welcome. Clearance Level: ${role === 'admin' ? 'ROOT' : 'IDENTIFIED'}`,
@@ -62,7 +53,7 @@ export default function AdminLoginPage() {
         const errorMsg = "Access Denied: Insufficient clearance for administrative terminal.";
         setAuthError(errorMsg);
         toast({ title: "Insufficient Clearance", description: errorMsg, variant: "destructive" });
-        await supabase.auth.signOut();
+        await auth.signOut();
       }
     } catch (error: any) {
       const friendlyMessage = error.message || "Protocol fault during authentication.";
