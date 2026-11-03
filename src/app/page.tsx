@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { cloudflareApi, CloudflareApp } from "@/lib/cloudflare-api";
-import { AppCard } from "@/components/app-card";
+import { AppCard } from "@/components/AppCard";
 import { Sparkles, LayoutGrid, ShieldCheck, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HexagonLogo } from "@/components/logo";
