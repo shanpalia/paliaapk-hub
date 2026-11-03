@@ -138,7 +138,7 @@ export default function ManageApps() {
                       size="icon" 
                       variant="secondary" 
                       className="rounded-xl h-10 w-10 bg-gray-100 hover:bg-primary/10 hover:text-primary" 
-                      onClick={() => router.push(`/admin/apps/new?edit=${app.id}`)}
+                      onClick={() => router.push(`/admin/edit?id=${encodeURIComponent(app.id)}`)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
