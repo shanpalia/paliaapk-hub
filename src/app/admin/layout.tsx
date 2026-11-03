@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { HexagonLogo } from "@/components/logo";
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { useAuth } from "@/firebase";
 import { toast } from "@/hooks/use-toast";
 
 const TEST_ADMIN_EMAIL = "shanpalia786@gmail.com";
@@ -29,6 +30,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const auth = useAuth();
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,19 +41,12 @@ export default function AdminLayout({
   const isLoginPage = pathname === "/admin/login";
 
   useEffect(() => {
-    const fetchSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
-    };
-    fetchSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
     });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    return unsubscribe;
+  }, [auth]);
 
   useEffect(() => {
     if (isLoginPage) {
@@ -88,25 +83,9 @@ export default function AdminLayout({
           return;
         }
 
-        try {
-          const { data: profile, error } = await supabase
-            .from('users')
-            .select('role')
-            .eq('uid', user.uid)
-            .single();
-
-          if (profile && profile.role === 'admin') {
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-            router.push("/");
-          }
-        } catch (e) {
-          setIsAdmin(false);
-          router.push("/admin/login");
-        } finally {
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        }
+        setIsAdmin(false);
+        router.push("/");
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
       }
     }
 
@@ -119,7 +98,7 @@ export default function AdminLayout({
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut(auth);
       router.push("/");
     } catch (e) {
       console.error("Admin Layout: Logout fault.", e);
