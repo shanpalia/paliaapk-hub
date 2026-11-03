@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/firebase";
+import { cloudflareApi } from "@/lib/cloudflare-api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2, ArrowLeft, Save, Image as ImageIcon, FileArchive, Sparkles, X, Home } from "lucide-react";
@@ -58,21 +59,6 @@ async function compressImageForStorage(file: File, maxDimension: number, quality
   }
 }
 
-async function uploadImageToTelegram(file: File): Promise<string> {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !session?.access_token) throw new Error("Please sign in again before uploading images.");
-  const body = new FormData();
-  body.append("file", file);
-  const response = await fetch("https://paliaapk-telegram-media.onrender.com/media", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${session.access_token}` },
-    body,
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || !result?.url) throw new Error(result?.error || "Telegram image upload failed.");
-  return result.url as string;
-}
-
 export default function EditAppPage() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") || "";
@@ -105,43 +91,34 @@ export default function EditAppPage() {
   const screenshotInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
+  const auth = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session || session.user.email !== "shanpalia786@gmail.com") {
+      const user = auth.currentUser;
+      if (!user || user.email?.toLowerCase() !== "shanpalia786@gmail.com") {
         toast({ variant: "destructive", title: "Access Denied", description: "Admin authentication required." });
         router.push("/");
-      } else {
-        setCheckingAuth(false);
-        fetchApp();
+        setLoading(false);
+        return;
       }
-    };
-
-    const fetchApp = async () => {
+      setCheckingAuth(false);
       try {
-        const { data, error } = await supabase
-          .from('apps')
-          .select('*')
-          .eq('id', id)
-          .single();
-        
-        if (error) throw error;
-        if (data) {
-          setFormData({
-            name: data.app_name,
-            version: data.version,
-            description: data.description,
-            category: data.category || "General",
-            icon_url: data.icon_url,
-            apk_url: data.apk_url,
-            apk_file_name: data.apk_file_name || "",
-            screenshot_url: data.screenshot_url || ""
-          });
-          setImagePreview(data.icon_url);
-          if (data.screenshot_url) setScreenshotPreview(data.screenshot_url);
-        }
+        const result = await cloudflareApi.getApp(id);
+        const data = result.app;
+        setFormData({
+          name: data.app_name || data.name || "",
+          version: data.version || "",
+          description: data.description || "",
+          category: data.category || "General",
+          icon_url: data.icon_url || "",
+          apk_url: data.apk_url || "",
+          apk_file_name: data.apk_file_name || "",
+          screenshot_url: data.screenshot_url || ""
+        });
+        setImagePreview(data.icon_url || null);
+        if (data.screenshot_url) setScreenshotPreview(data.screenshot_url);
       } catch (err: any) {
         toast({ variant: "destructive", title: "Error fetching app", description: err.message });
         router.push("/admin/dashboard");
@@ -149,9 +126,9 @@ export default function EditAppPage() {
         setLoading(false);
       }
     };
-
-    if (id) checkAuth();
-  }, [id, router, toast]);
+    if (id && auth.currentUser) checkAuth();
+    else if (!id) setLoading(false);
+  }, [id, auth.currentUser, router, toast]);
 
   useEffect(() => {
     return () => {
@@ -218,8 +195,8 @@ export default function EditAppPage() {
         phase = "Updating icon in storage";
         setCurrentPhase(phase);
         const optimizedIcon = await compressImageForStorage(imageFile, 256, 0.78);
-        const path = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedIcon.type === "image/webp" ? "webp" : (optimizedIcon.name.split('.').pop() || "img")}`;
-        icon_url = await uploadImageToTelegram(optimizedIcon);
+        const uploaded = await cloudflareApi.upload(optimizedIcon, "icons");
+        icon_url = uploaded.url;
       }
       setUploadProgress(30);
 
@@ -228,12 +205,8 @@ export default function EditAppPage() {
         phase = "Uploading new APK package";
         setCurrentPhase(phase);
         apkFileName = apkFile.name;
-        const ext = apkFileName.split('.').pop();
-        const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-        const { error } = await supabase.storage.from('apk-files').upload(path, apkFile);
-        if (error) throw { ...error, phase };
-        const { data: { publicUrl } } = supabase.storage.from('apk-files').getPublicUrl(path);
-        apkUrl = publicUrl;
+        const uploaded = await cloudflareApi.upload(apkFile, "apk");
+        apkUrl = uploaded.url;
       }
       setUploadProgress(60);
 
@@ -242,8 +215,8 @@ export default function EditAppPage() {
         phase = "Syncing screenshots";
         setCurrentPhase(phase);
         const optimizedScreenshot = await compressImageForStorage(screenshotFile, 1600, 0.80, 300 * 1024);
-        const path = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedScreenshot.type === "image/webp" ? "webp" : (optimizedScreenshot.name.split('.').pop() || "img")}`;
-        screenshotUrl = await uploadImageToTelegram(optimizedScreenshot);
+        const uploaded = await cloudflareApi.upload(optimizedScreenshot, "screenshots");
+        screenshotUrl = uploaded.url;
       }
       setUploadProgress(85);
 
@@ -264,19 +237,7 @@ export default function EditAppPage() {
 
       console.log("Update Payload (Table: apps):", payload);
 
-      const { error: dbError } = await supabase.from('apps').update(payload).eq('id', id);
-
-      if (dbError) {
-        console.error("Supabase Update Failed!", {
-          phase,
-          message: dbError.message,
-          code: dbError.code,
-          details: dbError.details,
-          hint: dbError.hint,
-          payload
-        });
-        throw { ...dbError, phase };
-      }
+      await cloudflareApi.updateApp(id, payload);
 
       setUploadProgress(100);
       toast({ title: "App Updated Successfully" });

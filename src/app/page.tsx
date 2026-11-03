@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { supabase, AppData } from "@/lib/supabase";
-import { AppCard } from "@/components/app-card";
+import { cloudflareApi, CloudflareApp } from "@/lib/cloudflare-api";
+import { AppCard } from "@/components/AppCard";
 import { Sparkles, LayoutGrid, ShieldCheck, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HexagonLogo } from "@/components/logo";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [isSplash, setIsSplash] = useState(true);
-  const [apps, setApps] = useState<AppData[]>([]);
+  const [apps, setApps] = useState<CloudflareApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorInfo, setErrorInfo] = useState<string | null>(null);
 
@@ -24,93 +24,19 @@ export default function Home() {
     setLoading(true);
     setErrorInfo(null);
 
-    const cacheKey = "paliaapk-hub-apps-cache-v1";
-    const readCachedApps = (): AppData[] => {
-      try {
-        const raw = window.localStorage.getItem(cacheKey);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed.filter((app) => app && app.id && app.app_name) : [];
-      } catch {
-        return [];
-      }
-    };
-
-    const useFallback = async (): Promise<AppData[]> => {
-      // Optional public JSON snapshot for first-time visitors when Supabase is unavailable.
-      try {
-        const response = await fetch("/apps-backup.json", { cache: "no-store" });
-        if (response.ok) {
-          const payload = await response.json();
-          const rows = Array.isArray(payload) ? payload : payload?.apps;
-          if (Array.isArray(rows)) {
-            const valid = rows.filter((app: any) => app && app.id && app.app_name && app.is_hidden !== true) as AppData[];
-            if (valid.length) {
-              try { window.localStorage.setItem(cacheKey, JSON.stringify(valid)); } catch { /* storage may be full */ }
-              return valid;
-            }
-          }
-        }
-      } catch (backupError) {
-        console.warn("Public app snapshot unavailable; trying saved cache.", backupError);
-      }
-      return readCachedApps().filter((app) => app.is_hidden !== true);
-    };
-
     try {
-      console.log("Hub Discovery: Scanning registry...");
-      // Match the live Supabase schema (public.apps uses name, screenshots, featured).
-      const { data, error } = await supabase
-        .from("apps")
-        .select("id, name, package_name, version, developer, category, description, whats_new, icon_url, apk_url, screenshots, downloads, created_at, featured, apk_size, banner_url, update_available, previous_version, release_notes")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const publishedApps: AppData[] = (data || []).map((row: any) => {
-        const rawScreenshots = row.screenshots;
-        const screenshotUrl = Array.isArray(rawScreenshots)
-          ? (typeof rawScreenshots[0] === "string" ? rawScreenshots[0] : rawScreenshots[0]?.url || rawScreenshots[0]?.src || "")
-          : (typeof rawScreenshots === "string" ? rawScreenshots : "");
-        return {
-          id: row.id,
-          app_name: row.name || row.package_name || "Untitled app",
-          version: row.version || "",
-          description: row.description || "",
-          icon_url: row.icon_url || "",
-          apk_url: row.apk_url || "",
-          screenshot_url: screenshotUrl,
-          downloads: Number(row.downloads || 0),
-          created_at: row.created_at || "",
-          category: row.category || "General",
-          developer: row.developer || "",
-          whats_new: row.whats_new || row.release_notes || "",
-          is_featured: row.featured === true,
-          package_name: row.package_name || "",
-          apk_size: row.apk_size || "",
-          is_hidden: false,
-        };
-      });
-      setApps(publishedApps);
-      try {
-        window.localStorage.setItem(cacheKey, JSON.stringify(publishedApps));
-      } catch (cacheError) {
-        console.warn("Could not save app cache.", cacheError);
-      }
+      const result = await cloudflareApi.listApps();
+      const published = (result.apps || []).filter(app => !app.is_hidden);
+      setApps(published);
+      try { window.localStorage.setItem("paliaapk-hub-apps-cache-v1", JSON.stringify(published)); } catch {}
     } catch (err: any) {
-      console.error("Hub Discovery: Supabase unavailable; attempting fallback.", err);
-      const fallbackApps = await useFallback();
-      if (fallbackApps.length > 0) {
-        setApps(fallbackApps);
-        setErrorInfo(null);
-        console.warn("Hub Discovery: Loaded cached/public backup app data.");
-      } else {
-        setApps([]);
-        setErrorInfo("Live database unavailable and no saved app backup is available on this device yet.");
-      }
-    } finally {
-      setLoading(false);
-    }
+      console.error("Cloudflare D1 unavailable; loading saved cache.", err);
+      try {
+        const cached = JSON.parse(window.localStorage.getItem("paliaapk-hub-apps-cache-v1") || "[]");
+        setApps(Array.isArray(cached) ? cached.filter((app: any) => !app.is_hidden) : []);
+      } catch { setApps([]); }
+      setErrorInfo("Cloudflare app registry is temporarily unavailable.");
+    } finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -206,8 +132,8 @@ export default function Home() {
                <ShieldCheck className="h-12 w-12 text-primary" />
             </div>
             <div>
-               <h3 className="text-2xl font-black tracking-tight leading-tight">Supabase Protected Distribution</h3>
-               <p className="text-[11px] font-black text-white/40 uppercase tracking-widest mt-2">Native Infrastructure Hosting Active</p>
+               <h3 className="text-2xl font-black tracking-tight leading-tight">Cloudflare Protected Distribution</h3>
+               <p className="text-[11px] font-black text-white/40 uppercase tracking-widest mt-2">Cloudflare D1 + R2 Storage Active</p>
             </div>
           </div>
         </div>

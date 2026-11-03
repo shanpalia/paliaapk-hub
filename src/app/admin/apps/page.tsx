@@ -18,11 +18,11 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
-import { supabase, AppData } from "@/lib/supabase";
+import { cloudflareApi, CloudflareApp } from "@/lib/cloudflare-api";
 import { toast } from "@/hooks/use-toast";
 
 export default function ManageApps() {
-  const [apps, setApps] = useState<AppData[]>([]);
+  const [apps, setApps] = useState<CloudflareApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
@@ -32,30 +32,33 @@ export default function ManageApps() {
   }, []);
 
   const fetchApps = async () => {
-    const { data, error } = await supabase
-      .from('apps')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (data) setApps(data);
-    setLoading(false);
+    try {
+      const result = await cloudflareApi.listApps();
+      setApps(result.apps || []);
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Could not load apps", description: error.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleVisibility = async (id: string, currentHidden: boolean) => {
-    const { error } = await supabase
-      .from('apps')
-      .update({ is_hidden: !currentHidden } as any)
-      .eq('id', id);
-    
-    if (!error) fetchApps();
+    try {
+      await cloudflareApi.updateApp(id, { is_hidden: !currentHidden });
+      await fetchApps();
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Update failed", description: error.message });
+    }
   };
 
   const deleteApp = async (id: string) => {
     if (!confirm("Decommission this hub entry?")) return;
-    const { error } = await supabase.from('apps').delete().eq('id', id);
-    if (!error) {
+    try {
+      await cloudflareApi.deleteApp(id);
       toast({ title: "Hub Entry Removed" });
-      fetchApps();
+      await fetchApps();
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Delete failed", description: error.message });
     }
   };
 
@@ -135,7 +138,7 @@ export default function ManageApps() {
                       size="icon" 
                       variant="secondary" 
                       className="rounded-xl h-10 w-10 bg-gray-100 hover:bg-primary/10 hover:text-primary" 
-                      onClick={() => router.push(`/admin/apps/new?edit=${app.id}`)}
+                      onClick={() => router.push(`/admin/edit?id=${encodeURIComponent(app.id)}`)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>

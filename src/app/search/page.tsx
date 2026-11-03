@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { Search as SearchIcon, TrendingUp, Clock, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { AppCard } from '@/components/app-card';
-import { AppData, supabase } from '@/lib/supabase';
+import { AppCard } from '@/components/AppCard';
+import { cloudflareApi, CloudflareApp } from '@/lib/cloudflare-api';
 
 const trendingSearches = ['Minecraft', 'PUBG Mobile', 'WhatsApp', 'Instagram', 'Adobe Lightroom', 'Spotify'];
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<AppData[]>([]);
+  const [results, setResults] = useState<CloudflareApp[]>([]);
   const [loading, setLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
@@ -19,35 +19,10 @@ export default function SearchPage() {
     const value = query.trim(); if (!value) { setResults([]); setLoading(false); return; }
     const timer = setTimeout(async () => {
       setLoading(true);
-      const safe = value.trim().replace(/[%_]/g, '');
-      const pattern = `%${safe}%`;
       try {
-        // Run independent filters instead of a fragile PostgREST .or() expression.
-        const fields = ['app_name', 'developer', 'category', 'description'] as const;
-        const responses = await Promise.all(
-          fields.map((field) =>
-            supabase
-              .from('apps')
-              .select('*')
-              .ilike(field, pattern)
-              .order('created_at', { ascending: false })
-              .limit(30)
-          )
-        );
-        const firstError = responses.find((response) => response.error)?.error;
-        if (firstError) throw firstError;
-
-        const unique = new Map<string, AppData>();
-        for (const response of responses) {
-          for (const app of (response.data || []) as AppData[]) {
-            if (app.is_hidden !== true) unique.set(app.id, app);
-          }
-        }
-        setResults(
-          Array.from(unique.values())
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, 30)
-        );
+        const result = await cloudflareApi.listApps();
+        const needle = value.toLowerCase();
+        setResults((result.apps || []).filter(app => !app.is_hidden && [app.app_name, app.name, app.developer, app.category, app.description].some(field => String(field || "").toLowerCase().includes(needle))).slice(0, 30));
       } catch (error) {
         console.error('Search failed', error);
         setResults([]);

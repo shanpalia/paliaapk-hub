@@ -6,27 +6,24 @@ import { useParams, useRouter } from "next/navigation";
 import { Download, Star, ShieldCheck, Loader2, Lock, Box, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase, AppData } from "@/lib/supabase";
+import { cloudflareApi, CloudflareApp } from "@/lib/cloudflare-api";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { useUser } from '@/firebase';
 
 export default function AppDetailsClient() {
   const params = useParams();
   const router = useRouter();
-  const [app, setApp] = useState<AppData | null>(null);
+  const [app, setApp] = useState<CloudflareApp | null>(null);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const { user } = useUser();
   const appId = params.id as string;
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const fetchApp = async () => {
-      const { data, error } = await supabase.from('apps').select('*').eq('id', appId).single();
-      if (!error) setApp(data);
-      setLoading(false);
+        const fetchApp = async () => {
+      try { const result = await cloudflareApi.getApp(appId); setApp(result.app); }
+      catch (error) { console.error(error); }
+      finally { setLoading(false); }
     };
 
     if (appId) fetchApp();
@@ -44,7 +41,7 @@ export default function AppDetailsClient() {
       toast({ title: "Transfer Initialized", description: `Downloading ${app.app_name} package...` });
       
       // Increment counter
-      supabase.from('apps').update({ downloads: (app.downloads || 0) + 1 }).eq('id', appId);
+      cloudflareApi.incrementDownload(appId).catch(console.error);
     }
   };
 

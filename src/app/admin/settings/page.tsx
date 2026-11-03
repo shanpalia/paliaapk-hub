@@ -45,7 +45,7 @@ export default function AdminSettings() {
               <div className="space-y-2">
                 <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Distribution Engine</label>
                 <div className="flex items-center h-14 bg-gray-50 rounded-2xl px-6 border-none font-bold text-sm">
-                  Supabase Cloud Infrastructure
+                  Cloudflare D1 + R2 Infrastructure
                 </div>
               </div>
             </div>
@@ -55,7 +55,7 @@ export default function AdminSettings() {
               <div>
                 <p className="text-[10px] font-black uppercase text-emerald-700 tracking-widest mb-1">Infrastructure Online</p>
                 <p className="text-[10px] font-medium text-emerald-600 leading-relaxed">
-                  All distribution nodes are operational. Supabase S3-compatible storage buckets are active for binary transfer protocols.
+                  All distribution nodes are operational. Cloudflare R2 object storage and D1 app registry are configured for binary distribution.
                 </p>
               </div>
             </div>
@@ -69,7 +69,7 @@ export default function AdminSettings() {
             </div>
             <div>
               <h3 className="font-black text-sm uppercase tracking-tight">Binary Storage</h3>
-              <p className="text-[10px] font-bold text-muted-foreground mt-1">Supabase Storage Buckets</p>
+              <p className="text-[10px] font-bold text-muted-foreground mt-1">Cloudflare R2 Storage Bucket</p>
             </div>
           </Card>
           <Card className="p-8 rounded-[2rem] border-none shadow-sm bg-white flex flex-col gap-4">
@@ -78,7 +78,7 @@ export default function AdminSettings() {
             </div>
             <div>
               <h3 className="font-black text-sm uppercase tracking-tight">Hub Registry</h3>
-              <p className="text-[10px] font-bold text-muted-foreground mt-1">PostgreSQL Live Instance</p>
+              <p className="text-[10px] font-bold text-muted-foreground mt-1">Cloudflare D1 Database</p>
             </div>
           </Card>
         </div>
