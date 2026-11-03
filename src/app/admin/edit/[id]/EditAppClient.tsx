@@ -195,8 +195,8 @@ export default function EditAppPage() {
         phase = "Updating icon in storage";
         setCurrentPhase(phase);
         const optimizedIcon = await compressImageForStorage(imageFile, 256, 0.78);
-        const path = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedIcon.type === "image/webp" ? "webp" : (optimizedIcon.name.split('.').pop() || "img")}`;
-        icon_url = await uploadImageToTelegram(optimizedIcon);
+        const uploaded = await cloudflareApi.upload(optimizedIcon, "icons");
+        icon_url = uploaded.url;
       }
       setUploadProgress(30);
 
@@ -205,12 +205,8 @@ export default function EditAppPage() {
         phase = "Uploading new APK package";
         setCurrentPhase(phase);
         apkFileName = apkFile.name;
-        const ext = apkFileName.split('.').pop();
-        const path = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-        const { error } = await supabase.storage.from('apk-files').upload(path, apkFile);
-        if (error) throw { ...error, phase };
-        const { data: { publicUrl } } = supabase.storage.from('apk-files').getPublicUrl(path);
-        apkUrl = publicUrl;
+        const uploaded = await cloudflareApi.upload(apkFile, "apk");
+        apkUrl = uploaded.url;
       }
       setUploadProgress(60);
 
@@ -219,8 +215,8 @@ export default function EditAppPage() {
         phase = "Syncing screenshots";
         setCurrentPhase(phase);
         const optimizedScreenshot = await compressImageForStorage(screenshotFile, 1600, 0.80, 300 * 1024);
-        const path = `${Date.now()}-${Math.random().toString(36).substring(7)}-${Math.random().toString(36).substring(2, 7)}.${optimizedScreenshot.type === "image/webp" ? "webp" : (optimizedScreenshot.name.split('.').pop() || "img")}`;
-        screenshotUrl = await uploadImageToTelegram(optimizedScreenshot);
+        const uploaded = await cloudflareApi.upload(optimizedScreenshot, "screenshots");
+        screenshotUrl = uploaded.url;
       }
       setUploadProgress(85);
 
@@ -241,19 +237,7 @@ export default function EditAppPage() {
 
       console.log("Update Payload (Table: apps):", payload);
 
-      const { error: dbError } = await supabase.from('apps').update(payload).eq('id', id);
-
-      if (dbError) {
-        console.error("Supabase Update Failed!", {
-          phase,
-          message: dbError.message,
-          code: dbError.code,
-          details: dbError.details,
-          hint: dbError.hint,
-          payload
-        });
-        throw { ...dbError, phase };
-      }
+      await cloudflareApi.updateApp(id, payload);
 
       setUploadProgress(100);
       toast({ title: "App Updated Successfully" });
