@@ -132,8 +132,8 @@ export default function Home() {
                <ShieldCheck className="h-12 w-12 text-primary" />
             </div>
             <div>
-               <h3 className="text-2xl font-black tracking-tight leading-tight">Supabase Protected Distribution</h3>
-               <p className="text-[11px] font-black text-white/40 uppercase tracking-widest mt-2">Native Infrastructure Hosting Active</p>
+               <h3 className="text-2xl font-black tracking-tight leading-tight">Cloudflare Protected Distribution</h3>
+               <p className="text-[11px] font-black text-white/40 uppercase tracking-widest mt-2">Cloudflare D1 + R2 Storage Active</p>
             </div>
           </div>
         </div>
