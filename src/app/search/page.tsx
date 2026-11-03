@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Search as SearchIcon, TrendingUp, Clock, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { AppCard } from '@/components/app-card';
+import { AppCard } from '@/components/AppCard';
 import { cloudflareApi, CloudflareApp } from '@/lib/cloudflare-api';
 
 const trendingSearches = ['Minecraft', 'PUBG Mobile', 'WhatsApp', 'Instagram', 'Adobe Lightroom', 'Spotify'];
