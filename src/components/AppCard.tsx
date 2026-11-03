@@ -7,10 +7,10 @@ import { Star, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { AppData, supabase } from "@/lib/supabase";
+import { CloudflareApp, cloudflareApi } from "@/lib/cloudflare-api";
 
 interface AppCardProps {
-  app: AppData;
+  app: CloudflareApp;
 }
 
 export function AppCard({ app }: AppCardProps) {
@@ -23,10 +23,7 @@ export function AppCard({ app }: AppCardProps) {
     if (app.apk_url) {
       window.open(app.apk_url, "_blank");
       try {
-        await supabase
-          .from('apps')
-          .update({ downloads: (app.downloads || 0) + 1 })
-          .eq('id', app.id);
+        await cloudflareApi.incrementDownload(app.id);
       } catch (err) {
         console.error("Hub Distribution: Download increment fault", err);
       }
