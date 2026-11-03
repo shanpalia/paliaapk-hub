@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "paliaapk-api",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-03",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "paliaapk-hub-db",
+      "database_id": "141c11b8-4216-4621-8079-21ff2c0092b6"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSETS",
+      "bucket_name": "paliaapk-hub"
+    }
+  ]
+}
