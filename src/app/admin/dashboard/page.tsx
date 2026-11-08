@@ -14,8 +14,7 @@ import {
   RefreshCw,
   Loader2,
   CheckCircle2,
-  AlertCircle,
-  Database
+  AlertCircle
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
