@@ -14,7 +14,8 @@ import {
   RefreshCw,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Database
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,8 @@ export default function AdminDashboard() {
     { label: "Publish New", desc: "Instantly deploy to Hub Storage", icon: PlusCircle, href: "/admin/apps/new", color: "text-blue-500", bg: "bg-blue-50" },
     { label: "Manage Hub", desc: "Edit or decommission entries", icon: Package, href: "/admin/apps", color: "text-emerald-500", bg: "bg-emerald-50" },
     { label: "Clearance", desc: "Security role management", icon: Users, href: "/admin/users", color: "text-orange-500", bg: "bg-orange-50" },
-    { label: "System Config", desc: "Infrastructure node settings", icon: SettingsIcon, href: "/admin/settings", color: "text-indigo-500", bg: "bg-indigo-50" }
+    { label: "System Config", desc: "Infrastructure node settings", icon: SettingsIcon, href: "/admin/settings", color: "text-indigo-500", bg: "bg-indigo-50" },
+    { label: "Image Migration", desc: "Copy Supabase images to Cloudflare R2", icon: Database, href: "/admin/migration", color: "text-cyan-600", bg: "bg-cyan-50" }
   ];
 
   return (
