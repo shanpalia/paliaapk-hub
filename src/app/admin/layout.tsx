@@ -8,6 +8,7 @@ import {
   Users, 
   Package, 
   Settings as SettingsIcon,
+  Database,
   LogOut,
   Loader2,
   ShieldAlert
@@ -149,6 +150,7 @@ export default function AdminLayout({
     { id: "add", label: "Publish New", icon: PlusCircle, href: "/admin/apps/new" },
     { id: "users", label: "Users", icon: Users, href: "/admin/users" },
     { id: "settings", label: "Settings", icon: SettingsIcon, href: "/admin/settings" },
+    { id: "migration", label: "Image Migration", icon: Database, href: "/admin/migration" },
   ];
 
   return (
